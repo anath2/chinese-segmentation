@@ -1,0 +1,23 @@
+<!-- Out-of-band swap to fill the textarea with extracted text -->
+<textarea
+    id="text"
+    name="text"
+    rows="6"
+    placeholder="Enter Chinese text here, e.g., 你好世界"
+    required
+    hx-swap-oob="true"
+    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-lg focus:outline-none focus:border-blue-500 transition-colors resize-y"
+>{{ extracted_text }}</textarea>
+
+<!-- Success message shown in results area -->
+<div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500">
+    <p class="text-green-700 font-medium">Text extracted from image</p>
+    <p class="text-green-600 text-sm mt-1">Review and edit the text above, then click Translate</p>
+</div>
+
+<!-- Clear the image preview after extraction -->
+<script>
+    if (typeof clearPreview === 'function') {
+        clearPreview();
+    }
+</script>

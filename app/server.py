@@ -16,7 +16,7 @@ from pydantic import BaseModel
 load_dotenv()
 
 # Configure DSPy with OpenRouter
-openrouter_model = os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet")
+openrouter_model = os.getenv("OPENROUTER_MODEL")
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
 if not openrouter_api_key:
@@ -218,6 +218,37 @@ async def translate_html(request: Request, text: str = Form(...)):
         return templates.TemplateResponse(
             "fragments/error.html",
             {"request": request, "message": f"Translation error: {e}"},
+        )
+
+
+@app.post("/extract-text-html", response_class=HTMLResponse)
+async def extract_text_html(request: Request, file: UploadFile = File(...)):
+    """HTMX endpoint for OCR extraction only - fills textarea for editing"""
+    try:
+        file_bytes = await file.read()
+
+        valid, error = validate_image_file(file_bytes, file.filename or "image.png")
+        if not valid:
+            return templates.TemplateResponse(
+                "fragments/error.html", {"request": request, "message": error}
+            )
+
+        extracted_text = await extract_text_from_image(file_bytes)
+
+        if not extracted_text.strip():
+            return templates.TemplateResponse(
+                "fragments/error.html",
+                {"request": request, "message": "No Chinese text found in image"},
+            )
+
+        return templates.TemplateResponse(
+            "fragments/ocr-result.html",
+            {"request": request, "extracted_text": extracted_text},
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            "fragments/error.html",
+            {"request": request, "message": f"OCR error: {e}"},
         )
 
 

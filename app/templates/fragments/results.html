@@ -1,10 +1,11 @@
 <!-- Segmented Output (displayed in right column) -->
-<div class="relative p-2">
-    <h2 class="text-xl font-semibold text-gray-800 mb-2">Segmented Text</h2>
+<div class="relative">
+    <h2 class="text-lg font-semibold mb-4" style="color: #2D2A26;">Segmented Text</h2>
 
-    <div class="segments flex flex-wrap gap-1 mb-2">
+    <div class="segments flex flex-wrap gap-1.5 mb-4">
         {% for item in results %}
-        <span class="segment inline-block px-2 py-1 text-xl cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg border-2 border-transparent"
+        <span class="segment inline-block px-2.5 py-1.5 text-xl rounded-md cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md border-2 border-transparent"
+              style="font-family: 'Noto Serif SC', serif;"
               data-pinyin="{{ item.pinyin }}"
               data-english="{{ item.english }}"
               data-index="{{ loop.index0 }}">{{ item.segment }}</span>
@@ -12,10 +13,10 @@
     </div>
 
     <!-- Floating tooltip overlay -->
-    <div id="word-tooltip" class="hidden absolute z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4 min-w-[160px] pointer-events-none">
-        <div class="text-lg text-gray-500 font-medium mb-1" id="tooltip-pinyin"></div>
-        <div class="text-base text-green-600" id="tooltip-english"></div>
-        <div class="absolute w-3 h-3 bg-white border-l border-b border-gray-200 transform rotate-45 -bottom-1.5 left-1/2 -translate-x-1/2"></div>
+    <div id="word-tooltip" class="hidden absolute z-50 bg-white rounded-xl shadow-xl p-4 min-w-[180px] pointer-events-none" style="border: 1px solid #E8E4DE;">
+        <div class="text-base font-medium mb-1" style="color: #6B6660;" id="tooltip-pinyin"></div>
+        <div class="text-sm" style="color: #E07A5F;" id="tooltip-english"></div>
+        <div class="absolute w-3 h-3 bg-white transform rotate-45 -bottom-1.5 left-1/2 -translate-x-1/2" style="border-right: 1px solid #E8E4DE; border-bottom: 1px solid #E8E4DE;"></div>
     </div>
 </div>
 
@@ -30,18 +31,18 @@
     const tableContainer = document.getElementById('translation-table');
     if (tableContainer) {
         let tableHtml = `
-            <div class="bg-white p-4 rounded-xl shadow-md">
+            <div class="bg-white p-5 rounded-2xl" style="box-shadow: 0 4px 24px rgba(45, 42, 38, 0.06); border: 1px solid rgba(45, 42, 38, 0.04);">
                 <button id="toggle-details-btn" class="flex items-center justify-between w-full text-left">
-                    <h3 class="text-lg font-semibold text-gray-800">Translation Details</h3>
-                    <span id="toggle-icon" class="text-gray-500 text-xl">+</span>
+                    <h3 class="text-base font-semibold" style="color: #2D2A26;">Translation Details</h3>
+                    <span id="toggle-icon" class="text-lg" style="color: #B8B2A8;">+</span>
                 </button>
                 <div id="details-content" class="hidden mt-4 overflow-x-auto">
                     <table class="w-full text-left">
                         <thead>
-                            <tr class="border-b border-gray-200">
-                                <th class="py-2 px-3 text-sm font-medium text-gray-600">Chinese</th>
-                                <th class="py-2 px-3 text-sm font-medium text-gray-600">Pinyin</th>
-                                <th class="py-2 px-3 text-sm font-medium text-gray-600">English</th>
+                            <tr style="border-bottom: 1px solid #E8E4DE;">
+                                <th class="py-2 px-3 text-xs font-semibold uppercase tracking-wider" style="color: #B8B2A8;">Chinese</th>
+                                <th class="py-2 px-3 text-xs font-semibold uppercase tracking-wider" style="color: #B8B2A8;">Pinyin</th>
+                                <th class="py-2 px-3 text-xs font-semibold uppercase tracking-wider" style="color: #B8B2A8;">English</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -49,10 +50,10 @@
 
         results.forEach((item, index) => {
             tableHtml += `
-                <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer translation-row" data-index="${index}">
-                    <td class="py-2 px-3 text-lg">${item.segment}</td>
-                    <td class="py-2 px-3 text-gray-500">${item.pinyin}</td>
-                    <td class="py-2 px-3 text-green-600">${item.english}</td>
+                <tr class="cursor-pointer translation-row" style="border-bottom: 1px solid #F5F0E8;" data-index="${index}">
+                    <td class="py-2.5 px-3 text-lg" style="font-family: 'Noto Serif SC', serif; color: #2D2A26;">${item.segment}</td>
+                    <td class="py-2.5 px-3" style="color: #6B6660;">${item.pinyin}</td>
+                    <td class="py-2.5 px-3" style="color: #E07A5F;">${item.english}</td>
                 </tr>
             `;
         });
@@ -86,43 +87,86 @@
         });
     }
 
-    // Segment click handlers with floating tooltip
+    // Helper function to show tooltip for a segment
+    function showTooltip(seg, isClick = false) {
+        // Remove active state from all segments
+        document.querySelectorAll('.segment').forEach(s => {
+            s.classList.remove('border-gray-800', 'shadow-lg');
+            s.classList.add('border-transparent');
+        });
+
+        // Add active state to segment
+        seg.classList.remove('border-transparent');
+        seg.classList.add('border-gray-800', 'shadow-lg');
+
+        // Update tooltip content
+        tooltipPinyin.textContent = seg.dataset.pinyin;
+        tooltipEnglish.textContent = seg.dataset.english;
+
+        // Position tooltip above the segment
+        const segRect = seg.getBoundingClientRect();
+        const containerRect = seg.closest('.relative').getBoundingClientRect();
+
+        tooltip.classList.remove('hidden');
+
+        // Calculate position relative to container
+        const left = segRect.left - containerRect.left + (segRect.width / 2) - (tooltip.offsetWidth / 2);
+        const top = segRect.top - containerRect.top - tooltip.offsetHeight - 8;
+
+        tooltip.style.left = Math.max(0, left) + 'px';
+        tooltip.style.top = top + 'px';
+
+        // Highlight corresponding table row
+        document.querySelectorAll('.translation-row').forEach(row => {
+            row.style.backgroundColor = '';
+        });
+        const row = document.querySelector(`.translation-row[data-index="${seg.dataset.index}"]`);
+        if (row) {
+            row.style.backgroundColor = 'rgba(224, 122, 95, 0.08)';
+        }
+    }
+
+    // Helper function to hide tooltip
+    function hideTooltip() {
+        tooltip.classList.add('hidden');
+        document.querySelectorAll('.segment').forEach(s => {
+            s.classList.remove('border-gray-800', 'shadow-lg');
+            s.classList.add('border-transparent');
+        });
+        document.querySelectorAll('.translation-row').forEach(row => {
+            row.style.backgroundColor = '';
+        });
+    }
+
+    let isClickActive = false;
+
+    // Segment event handlers
     document.querySelectorAll('.segment').forEach(seg => {
+        // Show tooltip on hover
+        seg.addEventListener('mouseenter', () => {
+            if (!isClickActive) {
+                showTooltip(seg);
+            }
+        });
+
+        // Hide tooltip when mouse leaves (unless clicked)
+        seg.addEventListener('mouseleave', () => {
+            if (!isClickActive) {
+                hideTooltip();
+            }
+        });
+
+        // Toggle pinned state on click
         seg.addEventListener('click', (e) => {
-            // Remove active state from all segments
-            document.querySelectorAll('.segment').forEach(s => {
-                s.classList.remove('border-gray-800', 'shadow-lg');
-                s.classList.add('border-transparent');
-            });
-
-            // Add active state to clicked segment
-            seg.classList.remove('border-transparent');
-            seg.classList.add('border-gray-800', 'shadow-lg');
-
-            // Update tooltip content
-            tooltipPinyin.textContent = seg.dataset.pinyin;
-            tooltipEnglish.textContent = seg.dataset.english;
-
-            // Position tooltip above the clicked segment
-            const segRect = seg.getBoundingClientRect();
-            const containerRect = seg.closest('.relative').getBoundingClientRect();
-
-            tooltip.classList.remove('hidden');
-
-            // Calculate position relative to container
-            const left = segRect.left - containerRect.left + (segRect.width / 2) - (tooltip.offsetWidth / 2);
-            const top = segRect.top - containerRect.top - tooltip.offsetHeight - 8;
-
-            tooltip.style.left = Math.max(0, left) + 'px';
-            tooltip.style.top = top + 'px';
-
-            // Highlight corresponding table row
-            document.querySelectorAll('.translation-row').forEach(row => {
-                row.classList.remove('bg-blue-50');
-            });
-            const row = document.querySelector(`.translation-row[data-index="${seg.dataset.index}"]`);
-            if (row) {
-                row.classList.add('bg-blue-50');
+            e.stopPropagation();
+            if (isClickActive && seg.classList.contains('border-gray-800')) {
+                // Clicking the same segment again unpins it
+                isClickActive = false;
+                hideTooltip();
+            } else {
+                // Pin this segment
+                isClickActive = true;
+                showTooltip(seg, true);
             }
         });
     });
@@ -130,14 +174,8 @@
     // Hide tooltip when clicking outside
     document.addEventListener('click', (e) => {
         if (!e.target.classList.contains('segment')) {
-            tooltip.classList.add('hidden');
-            document.querySelectorAll('.segment').forEach(s => {
-                s.classList.remove('border-gray-800', 'shadow-lg');
-                s.classList.add('border-transparent');
-            });
-            document.querySelectorAll('.translation-row').forEach(row => {
-                row.classList.remove('bg-blue-50');
-            });
+            isClickActive = false;
+            hideTooltip();
         }
     });
 })();

@@ -6,6 +6,9 @@
     <title>Chinese Text Transcriber</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --pastel-1: #FFB3BA;
@@ -20,6 +23,19 @@
             --pastel-10: #FFE5B4;
             --pastel-11: #C9C9FF;
             --pastel-12: #FFDAC1;
+            --cream: #FDFBF7;
+            --ink: #2D2A26;
+            --ink-light: #6B6660;
+            --accent: #E07A5F;
+        }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: linear-gradient(135deg, var(--cream) 0%, #F5F0E8 100%);
+        }
+
+        .font-chinese {
+            font-family: 'Noto Serif SC', serif;
         }
 
         .segment:nth-child(12n+1) { background: var(--pastel-1); }
@@ -50,109 +66,188 @@
 
         form.htmx-request .btn-text { display: none; }
         form.htmx-request .btn-loading { display: inline-flex; }
-        form.htmx-request button { pointer-events: none; opacity: 0.9; }
+        form.htmx-request button[type="submit"] { pointer-events: none; opacity: 0.9; }
+
+        .input-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(45, 42, 38, 0.06);
+            border: 1px solid rgba(45, 42, 38, 0.04);
+        }
+
+        .textarea-main {
+            font-family: 'Noto Serif SC', 'Source Sans 3', sans-serif;
+            font-size: 1.25rem;
+            line-height: 1.8;
+            border: 2px solid #E8E4DE;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .textarea-main:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.1);
+        }
+
+        .image-upload-zone {
+            border: 2px dashed #D4CFC7;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #FDFBF7 0%, #F9F6F0 100%);
+            transition: all 0.2s ease;
+        }
+
+        .image-upload-zone:hover {
+            border-color: var(--accent);
+            background: linear-gradient(180deg, #FDF9F5 0%, #FAF4ED 100%);
+        }
+
+        .image-upload-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(224, 122, 95, 0.05);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(224, 122, 95, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: #C96A50;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--ink-light);
+            border: 1px solid #D4CFC7;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .section-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--ink-light);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .section-divider::before,
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #E8E4DE;
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-7xl">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Chinese Text Transcriber</h1>
-            <p class="text-gray-600">Enter Chinese text to get word segmentation, pinyin, and English translation</p>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-10 max-w-7xl">
+        <header class="text-center mb-10">
+            <h1 class="font-chinese text-4xl font-semibold mb-3" style="color: var(--ink);">
+                Chinese Text Transcriber
+            </h1>
+            <p class="text-lg" style="color: var(--ink-light);">
+                Enter Chinese text to get word segmentation, pinyin, and English translation
+            </p>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Left Column: Input and Translation Results -->
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <!-- Left Column: Unified Input -->
             <div class="space-y-6">
-                <div class="bg-white p-6 rounded-xl shadow-md">
-                    <!-- Tab Navigation -->
-                    <div class="flex border-b border-gray-200 mb-4">
-                        <button id="text-tab" onclick="switchTab('text')"
-                                class="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600">
-                            Text Input
+                <div class="input-card p-6 h-[580px] overflow-y-auto">
+                    <!-- Text Input Form -->
+                    <form id="translate-form"
+                          hx-post="/translate-html"
+                          hx-target="#results"
+                          hx-swap="innerHTML">
+
+                        <div class="mb-5">
+                            <label for="text" class="block text-sm font-semibold mb-2" style="color: var(--ink);">
+                                Chinese Text
+                            </label>
+                            <textarea
+                                id="text"
+                                name="text"
+                                rows="6"
+                                placeholder="Enter Chinese text here, e.g., 你好世界"
+                                required
+                                class="textarea-main w-full px-4 py-3 resize-y"
+                            ></textarea>
+                        </div>
+
+                        <button type="submit" class="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 min-w-[140px]">
+                            <span class="btn-text">Translate</span>
+                            <span class="btn-loading hidden items-center gap-2">
+                                <span class="spinner"></span>
+                                Translating...
+                            </span>
                         </button>
-                        <button id="image-tab" onclick="switchTab('image')"
-                                class="px-4 py-2 font-medium text-gray-500 hover:text-gray-700">
-                            Image Upload
-                        </button>
+                    </form>
+
+                    <!-- Divider -->
+                    <div class="section-divider my-6">
+                        <span>or extract from image</span>
                     </div>
 
-                    <!-- Text Input Panel -->
-                    <div id="text-panel">
-                        <form hx-post="/translate-html"
-                              hx-target="#results"
-                              hx-swap="innerHTML">
+                    <!-- Image Upload Form (OCR only) -->
+                    <form id="ocr-form"
+                          hx-post="/extract-text-html"
+                          hx-target="#results"
+                          hx-swap="innerHTML"
+                          hx-encoding="multipart/form-data">
 
-                            <div class="mb-4">
-                                <label for="text" class="block text-sm font-medium text-gray-700 mb-2">Chinese Text</label>
-                                <textarea
-                                    id="text"
-                                    name="text"
-                                    rows="6"
-                                    placeholder="Enter Chinese text here, e.g., 你好世界"
-                                    required
-                                    class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-lg focus:outline-none focus:border-blue-500 transition-colors resize-y"
-                                ></textarea>
+                        <div id="drop-zone" class="image-upload-zone p-6 text-center cursor-pointer">
+                            <input type="file"
+                                   id="image-input"
+                                   name="file"
+                                   accept=".png,.jpg,.jpeg,.webp,.gif"
+                                   class="hidden">
+
+                            <div id="upload-prompt">
+                                <svg class="mx-auto h-10 w-10 mb-3" style="color: #B8B2A8;" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <p class="text-sm font-medium" style="color: var(--ink-light);">
+                                    Drop an image here or click to upload
+                                </p>
+                                <p class="mt-1 text-xs" style="color: #B8B2A8;">
+                                    PNG, JPG, JPEG, WebP, GIF (max 5MB)
+                                </p>
                             </div>
 
-                            <button type="submit" class="inline-flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors min-w-[140px]">
-                                <span class="btn-text">Translate</span>
-                                <span class="btn-loading hidden items-center gap-2">
-                                    <span class="spinner"></span>
-                                    Translating...
-                                </span>
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Image Upload Panel -->
-                    <div id="image-panel" class="hidden">
-                        <form hx-post="/translate-image-html"
-                              hx-target="#results"
-                              hx-swap="innerHTML"
-                              hx-encoding="multipart/form-data">
-
-                            <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    Upload Image with Chinese Text
-                                </label>
-                                <div id="drop-zone"
-                                     class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors">
-                                    <input type="file"
-                                           id="image-input"
-                                           name="file"
-                                           accept=".png,.jpg,.jpeg,.webp,.gif"
-                                           class="hidden"
-                                           required>
-                                    <div id="upload-prompt">
-                                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
-                                        <p class="mt-2 text-sm text-gray-600">
-                                            Click to upload or drag and drop
-                                        </p>
-                                        <p class="mt-1 text-xs text-gray-500">
-                                            PNG, JPG, JPEG, WebP, GIF (max 5MB)
-                                        </p>
-                                    </div>
-                                    <div id="preview-container" class="hidden">
-                                        <img id="image-preview" class="max-h-48 mx-auto rounded">
-                                        <p id="file-name" class="mt-2 text-sm text-gray-600"></p>
-                                        <button type="button" onclick="clearPreview()" class="mt-2 text-xs text-red-500 hover:text-red-700">
-                                            Remove
-                                        </button>
-                                    </div>
+                            <div id="preview-container" class="hidden">
+                                <img id="image-preview" class="max-h-40 mx-auto rounded-lg shadow-sm">
+                                <p id="file-name" class="mt-3 text-sm font-medium" style="color: var(--ink);"></p>
+                                <div class="mt-3 flex items-center justify-center gap-3">
+                                    <button type="submit" class="btn-secondary px-4 py-2 text-sm inline-flex items-center gap-2">
+                                        <span class="btn-text">Extract Text</span>
+                                        <span class="btn-loading hidden items-center gap-2">
+                                            <span class="spinner" style="border-color: rgba(107, 102, 96, 0.3); border-top-color: #6B6660;"></span>
+                                            Extracting...
+                                        </span>
+                                    </button>
+                                    <button type="button" onclick="clearPreview()" class="text-xs hover:underline" style="color: var(--accent);">
+                                        Remove
+                                    </button>
                                 </div>
                             </div>
-
-                            <button type="submit" class="inline-flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors min-w-[180px]">
-                                <span class="btn-text">Extract & Translate</span>
-                                <span class="btn-loading hidden items-center gap-2">
-                                    <span class="spinner"></span>
-                                    Processing...
-                                </span>
-                            </button>
-                        </form>
-                    </div>
+                        </div>
+                    </form>
                 </div>
 
                 <!-- Translation Results Table (appears below input) -->
@@ -160,35 +255,14 @@
             </div>
 
             <!-- Right Column: Segmented Output -->
-            <div id="results" class="bg-white min-h-[200px]">
-                <p class="text-gray-400 text-center italic">Translation results will appear here</p>
+            <div id="results" class="input-card h-[580px] overflow-y-auto p-6">
+                <div class="h-full flex items-center justify-center">
+                    <p class="text-center italic" style="color: #B8B2A8;">Translation results will appear here</p>
+                </div>
             </div>
         </main>
 
         <script>
-            function switchTab(tab) {
-                const textTab = document.getElementById('text-tab');
-                const imageTab = document.getElementById('image-tab');
-                const textPanel = document.getElementById('text-panel');
-                const imagePanel = document.getElementById('image-panel');
-
-                if (tab === 'text') {
-                    textTab.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
-                    textTab.classList.remove('text-gray-500');
-                    imageTab.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
-                    imageTab.classList.add('text-gray-500');
-                    textPanel.classList.remove('hidden');
-                    imagePanel.classList.add('hidden');
-                } else {
-                    imageTab.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
-                    imageTab.classList.remove('text-gray-500');
-                    textTab.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
-                    textTab.classList.add('text-gray-500');
-                    imagePanel.classList.remove('hidden');
-                    textPanel.classList.add('hidden');
-                }
-            }
-
             function clearPreview() {
                 const fileInput = document.getElementById('image-input');
                 const uploadPrompt = document.getElementById('upload-prompt');
@@ -215,16 +289,16 @@
 
                 dropZone.addEventListener('dragover', (e) => {
                     e.preventDefault();
-                    dropZone.classList.add('border-blue-500', 'bg-blue-50');
+                    dropZone.classList.add('drag-over');
                 });
 
                 dropZone.addEventListener('dragleave', () => {
-                    dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+                    dropZone.classList.remove('drag-over');
                 });
 
                 dropZone.addEventListener('drop', (e) => {
                     e.preventDefault();
-                    dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+                    dropZone.classList.remove('drag-over');
 
                     const files = e.dataTransfer.files;
                     if (files.length > 0) {
