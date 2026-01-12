@@ -1,0 +1,144 @@
+<!-- Segmented Output (displayed in right column) -->
+<div class="relative p-2">
+    <h2 class="text-xl font-semibold text-gray-800 mb-2">Segmented Text</h2>
+
+    <div class="segments flex flex-wrap gap-1 mb-2">
+        {% for item in results %}
+        <span class="segment inline-block px-2 py-1 text-xl cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg border-2 border-transparent"
+              data-pinyin="{{ item.pinyin }}"
+              data-english="{{ item.english }}"
+              data-index="{{ loop.index0 }}">{{ item.segment }}</span>
+        {% endfor %}
+    </div>
+
+    <!-- Floating tooltip overlay -->
+    <div id="word-tooltip" class="hidden absolute z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-4 min-w-[160px] pointer-events-none">
+        <div class="text-lg text-gray-500 font-medium mb-1" id="tooltip-pinyin"></div>
+        <div class="text-base text-green-600" id="tooltip-english"></div>
+        <div class="absolute w-3 h-3 bg-white border-l border-b border-gray-200 transform rotate-45 -bottom-1.5 left-1/2 -translate-x-1/2"></div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const tooltip = document.getElementById('word-tooltip');
+    const tooltipPinyin = document.getElementById('tooltip-pinyin');
+    const tooltipEnglish = document.getElementById('tooltip-english');
+    const results = {{ results | tojson }};
+
+    // Update translation table on the left
+    const tableContainer = document.getElementById('translation-table');
+    if (tableContainer) {
+        let tableHtml = `
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <button id="toggle-details-btn" class="flex items-center justify-between w-full text-left">
+                    <h3 class="text-lg font-semibold text-gray-800">Translation Details</h3>
+                    <span id="toggle-icon" class="text-gray-500 text-xl">+</span>
+                </button>
+                <div id="details-content" class="hidden mt-4 overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="py-2 px-3 text-sm font-medium text-gray-600">Chinese</th>
+                                <th class="py-2 px-3 text-sm font-medium text-gray-600">Pinyin</th>
+                                <th class="py-2 px-3 text-sm font-medium text-gray-600">English</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+
+        results.forEach((item, index) => {
+            tableHtml += `
+                <tr class="border-b border-gray-100 hover:bg-gray-50 cursor-pointer translation-row" data-index="${index}">
+                    <td class="py-2 px-3 text-lg">${item.segment}</td>
+                    <td class="py-2 px-3 text-gray-500">${item.pinyin}</td>
+                    <td class="py-2 px-3 text-green-600">${item.english}</td>
+                </tr>
+            `;
+        });
+
+        tableHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        tableContainer.innerHTML = tableHtml;
+
+        // Toggle details visibility
+        document.getElementById('toggle-details-btn').addEventListener('click', () => {
+            const content = document.getElementById('details-content');
+            const icon = document.getElementById('toggle-icon');
+            content.classList.toggle('hidden');
+            icon.textContent = content.classList.contains('hidden') ? '+' : '−';
+        });
+
+        // Add click handlers for table rows
+        document.querySelectorAll('.translation-row').forEach(row => {
+            row.addEventListener('click', () => {
+                const index = row.dataset.index;
+                const segment = document.querySelector(`.segment[data-index="${index}"]`);
+                if (segment) {
+                    segment.click();
+                    segment.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        });
+    }
+
+    // Segment click handlers with floating tooltip
+    document.querySelectorAll('.segment').forEach(seg => {
+        seg.addEventListener('click', (e) => {
+            // Remove active state from all segments
+            document.querySelectorAll('.segment').forEach(s => {
+                s.classList.remove('border-gray-800', 'shadow-lg');
+                s.classList.add('border-transparent');
+            });
+
+            // Add active state to clicked segment
+            seg.classList.remove('border-transparent');
+            seg.classList.add('border-gray-800', 'shadow-lg');
+
+            // Update tooltip content
+            tooltipPinyin.textContent = seg.dataset.pinyin;
+            tooltipEnglish.textContent = seg.dataset.english;
+
+            // Position tooltip above the clicked segment
+            const segRect = seg.getBoundingClientRect();
+            const containerRect = seg.closest('.relative').getBoundingClientRect();
+
+            tooltip.classList.remove('hidden');
+
+            // Calculate position relative to container
+            const left = segRect.left - containerRect.left + (segRect.width / 2) - (tooltip.offsetWidth / 2);
+            const top = segRect.top - containerRect.top - tooltip.offsetHeight - 8;
+
+            tooltip.style.left = Math.max(0, left) + 'px';
+            tooltip.style.top = top + 'px';
+
+            // Highlight corresponding table row
+            document.querySelectorAll('.translation-row').forEach(row => {
+                row.classList.remove('bg-blue-50');
+            });
+            const row = document.querySelector(`.translation-row[data-index="${seg.dataset.index}"]`);
+            if (row) {
+                row.classList.add('bg-blue-50');
+            }
+        });
+    });
+
+    // Hide tooltip when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.classList.contains('segment')) {
+            tooltip.classList.add('hidden');
+            document.querySelectorAll('.segment').forEach(s => {
+                s.classList.remove('border-gray-800', 'shadow-lg');
+                s.classList.add('border-transparent');
+            });
+            document.querySelectorAll('.translation-row').forEach(row => {
+                row.classList.remove('bg-blue-50');
+            });
+        }
+    });
+})();
+</script>
