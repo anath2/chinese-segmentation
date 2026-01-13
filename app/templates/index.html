@@ -8,48 +8,89 @@
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --pastel-1: #FFB3BA;
-            --pastel-2: #FFDFBA;
-            --pastel-3: #FFFFBA;
-            --pastel-4: #BAFFC9;
-            --pastel-5: #BAE1FF;
-            --pastel-6: #E0BBE4;
-            --pastel-7: #FEC8D8;
-            --pastel-8: #D4F0F0;
-            --pastel-9: #CCE2CB;
-            --pastel-10: #FFE5B4;
-            --pastel-11: #C9C9FF;
-            --pastel-12: #FFDAC1;
-            --cream: #FDFBF7;
-            --ink: #2D2A26;
-            --ink-light: #6B6660;
-            --accent: #E07A5F;
+            /* Primary colors */
+            --primary: #7C9EB2;
+            --primary-light: #A8C5D8;
+            --primary-dark: #5A7A8A;
+
+            /* Secondary colors */
+            --secondary: #E8B4BC;
+            --secondary-light: #F5D5DA;
+            --secondary-dark: #C9929A;
+
+            /* Backgrounds */
+            --background: #FAFAFA;
+            --background-alt: #F5F5F5;
+            --surface: #FFFFFF;
+
+            /* Text */
+            --text-primary: #2D3436;
+            --text-secondary: #636E72;
+            --text-muted: #B2BEC3;
+
+            /* Segment colors (8 rotating) */
+            --pastel-1: #FFB3BA; /* pink */
+            --pastel-2: #BAFFC9; /* mint */
+            --pastel-3: #BAE1FF; /* sky */
+            --pastel-4: #FFFFBA; /* lemon */
+            --pastel-5: #FFD9BA; /* peach */
+            --pastel-6: #E0BBE4; /* lavender */
+            --pastel-7: #C9F0FF; /* ice */
+            --pastel-8: #FFDAB3; /* apricot */
+
+            /* UI elements */
+            --border: #E0E0E0;
+            --border-focus: #7C9EB2;
+            --shadow: rgba(0, 0, 0, 0.08);
+
+            /* Feedback */
+            --success: #A8E6CF;
+            --warning: #FFE5B4;
+            --error: #FFB3BA;
+            --info: #BAE1FF;
+
+            /* Tooltip */
+            --tooltip-bg: #2D3436;
+            --tooltip-text: #FFFFFF;
+
+            /* Typography */
+            --font-chinese: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+            --font-body: "Inter", "SF Pro Display", system-ui, sans-serif;
+            --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+            /* Font sizes */
+            --text-chinese: 1.4rem;
+            --text-base: 1rem;
+            --text-sm: 0.875rem;
+            --text-lg: 1.25rem;
+            --text-xl: 1.5rem;
+
+            /* Line heights */
+            --leading-segmented: 2.8;
+            --leading-normal: 1.5;
         }
 
         body {
-            font-family: 'Source Sans 3', sans-serif;
-            background: linear-gradient(135deg, var(--cream) 0%, #F5F0E8 100%);
+            font-family: var(--font-body);
+            background: var(--background);
+            line-height: var(--leading-normal);
         }
 
         .font-chinese {
-            font-family: 'Noto Serif SC', serif;
+            font-family: var(--font-chinese);
         }
 
-        .segment:nth-child(12n+1) { background: var(--pastel-1); }
-        .segment:nth-child(12n+2) { background: var(--pastel-2); }
-        .segment:nth-child(12n+3) { background: var(--pastel-3); }
-        .segment:nth-child(12n+4) { background: var(--pastel-4); }
-        .segment:nth-child(12n+5) { background: var(--pastel-5); }
-        .segment:nth-child(12n+6) { background: var(--pastel-6); }
-        .segment:nth-child(12n+7) { background: var(--pastel-7); }
-        .segment:nth-child(12n+8) { background: var(--pastel-8); }
-        .segment:nth-child(12n+9) { background: var(--pastel-9); }
-        .segment:nth-child(12n+10) { background: var(--pastel-10); }
-        .segment:nth-child(12n+11) { background: var(--pastel-11); }
-        .segment:nth-child(12n+12) { background: var(--pastel-12); }
+        .segment:nth-child(8n+1) { background: var(--pastel-1); }
+        .segment:nth-child(8n+2) { background: var(--pastel-2); }
+        .segment:nth-child(8n+3) { background: var(--pastel-3); }
+        .segment:nth-child(8n+4) { background: var(--pastel-4); }
+        .segment:nth-child(8n+5) { background: var(--pastel-5); }
+        .segment:nth-child(8n+6) { background: var(--pastel-6); }
+        .segment:nth-child(8n+7) { background: var(--pastel-7); }
+        .segment:nth-child(8n+8) { background: var(--pastel-8); }
 
         .spinner {
             width: 16px;
@@ -69,78 +110,78 @@
         form.htmx-request button[type="submit"] { pointer-events: none; opacity: 0.9; }
 
         .input-card {
-            background: white;
+            background: var(--surface);
             border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(45, 42, 38, 0.06);
-            border: 1px solid rgba(45, 42, 38, 0.04);
+            box-shadow: 0 2px 8px var(--shadow);
+            border: 1px solid var(--border);
         }
 
         .textarea-main {
-            font-family: 'Noto Serif SC', 'Source Sans 3', sans-serif;
-            font-size: 1.25rem;
+            font-family: var(--font-chinese);
+            font-size: var(--text-chinese);
             line-height: 1.8;
-            border: 2px solid #E8E4DE;
+            border: 2px solid var(--border);
             border-radius: 12px;
             transition: all 0.2s ease;
         }
 
         .textarea-main:focus {
             outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.1);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(124, 158, 178, 0.15);
         }
 
         .image-upload-zone {
-            border: 2px dashed #D4CFC7;
+            border: 2px dashed var(--border);
             border-radius: 12px;
-            background: linear-gradient(180deg, #FDFBF7 0%, #F9F6F0 100%);
+            background: var(--background-alt);
             transition: all 0.2s ease;
         }
 
         .image-upload-zone:hover {
-            border-color: var(--accent);
-            background: linear-gradient(180deg, #FDF9F5 0%, #FAF4ED 100%);
+            border-color: var(--primary);
+            background: var(--surface);
         }
 
         .image-upload-zone.drag-over {
-            border-color: var(--accent);
-            background: rgba(224, 122, 95, 0.05);
+            border-color: var(--primary);
+            background: rgba(124, 158, 178, 0.08);
         }
 
         .btn-primary {
-            background: var(--accent);
+            background: var(--primary);
             color: white;
             border-radius: 10px;
             font-weight: 600;
             transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(224, 122, 95, 0.25);
+            box-shadow: 0 2px 8px rgba(124, 158, 178, 0.3);
         }
 
         .btn-primary:hover {
-            background: #C96A50;
+            background: var(--primary-dark);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+            box-shadow: 0 4px 12px rgba(124, 158, 178, 0.4);
         }
 
         .btn-secondary {
             background: transparent;
-            color: var(--ink-light);
-            border: 1px solid #D4CFC7;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
             border-radius: 8px;
             font-weight: 500;
             transition: all 0.2s ease;
         }
 
         .btn-secondary:hover {
-            border-color: var(--accent);
-            color: var(--accent);
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         .section-divider {
             display: flex;
             align-items: center;
             gap: 12px;
-            color: var(--ink-light);
+            color: var(--text-secondary);
             font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -151,17 +192,60 @@
             content: '';
             flex: 1;
             height: 1px;
-            background: #E8E4DE;
+            background: var(--border);
+        }
+
+        /* Progress bar styles */
+        .progress-container {
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Pending segment style */
+        .segment-pending {
+            background: var(--border) !important;
+            color: var(--text-muted);
+            cursor: default;
+        }
+
+        .segment-pending:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Translating animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .segment-translating {
+            animation: pulse 1s ease-in-out infinite;
+            background: var(--primary-light) !important;
         }
     </style>
 </head>
 <body class="min-h-screen">
     <div class="container mx-auto px-4 py-10 max-w-7xl">
         <header class="text-center mb-10">
-            <h1 class="font-chinese text-4xl font-semibold mb-3" style="color: var(--ink);">
+            <h1 class="font-chinese text-4xl font-semibold mb-3" style="color: var(--text-primary);">
                 Chinese Text Transcriber
             </h1>
-            <p class="text-lg" style="color: var(--ink-light);">
+            <p class="text-lg" style="color: var(--text-secondary);">
                 Enter Chinese text to get word segmentation, pinyin, and English translation
             </p>
         </header>
@@ -169,15 +253,12 @@
         <main class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
             <!-- Left Column: Unified Input -->
             <div class="space-y-6">
-                <div class="input-card p-6 h-[580px] overflow-y-auto">
+                <div class="input-card p-6 h-[100%]">
                     <!-- Text Input Form -->
-                    <form id="translate-form"
-                          hx-post="/translate-html"
-                          hx-target="#results"
-                          hx-swap="innerHTML">
+                    <form id="translate-form">
 
                         <div class="mb-5">
-                            <label for="text" class="block text-sm font-semibold mb-2" style="color: var(--ink);">
+                            <label for="text" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
                                 Chinese Text
                             </label>
                             <textarea
@@ -219,29 +300,29 @@
                                    class="hidden">
 
                             <div id="upload-prompt">
-                                <svg class="mx-auto h-10 w-10 mb-3" style="color: #B8B2A8;" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <svg class="mx-auto h-10 w-10 mb-3" style="color: var(--text-muted);" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
-                                <p class="text-sm font-medium" style="color: var(--ink-light);">
+                                <p class="text-sm font-medium" style="color: var(--text-secondary);">
                                     Drop an image here or click to upload
                                 </p>
-                                <p class="mt-1 text-xs" style="color: #B8B2A8;">
+                                <p class="mt-1 text-xs" style="color: var(--text-muted);">
                                     PNG, JPG, JPEG, WebP, GIF (max 5MB)
                                 </p>
                             </div>
 
                             <div id="preview-container" class="hidden">
                                 <img id="image-preview" class="max-h-40 mx-auto rounded-lg shadow-sm">
-                                <p id="file-name" class="mt-3 text-sm font-medium" style="color: var(--ink);"></p>
+                                <p id="file-name" class="mt-3 text-sm font-medium" style="color: var(--text-primary);"></p>
                                 <div class="mt-3 flex items-center justify-center gap-3">
                                     <button type="submit" class="btn-secondary px-4 py-2 text-sm inline-flex items-center gap-2">
                                         <span class="btn-text">Extract Text</span>
                                         <span class="btn-loading hidden items-center gap-2">
-                                            <span class="spinner" style="border-color: rgba(107, 102, 96, 0.3); border-top-color: #6B6660;"></span>
+                                            <span class="spinner" style="border-color: rgba(99, 110, 114, 0.3); border-top-color: var(--text-secondary);"></span>
                                             Extracting...
                                         </span>
                                     </button>
-                                    <button type="button" onclick="clearPreview()" class="text-xs hover:underline" style="color: var(--accent);">
+                                    <button type="button" onclick="clearPreview()" class="text-xs hover:underline" style="color: var(--primary);">
                                         Remove
                                     </button>
                                 </div>
@@ -255,9 +336,9 @@
             </div>
 
             <!-- Right Column: Segmented Output -->
-            <div id="results" class="input-card h-[580px] overflow-y-auto p-6">
+            <div id="results" class="input-card h-[100%] overflow-y-auto p-6">
                 <div class="h-full flex items-center justify-center">
-                    <p class="text-center italic" style="color: #B8B2A8;">Translation results will appear here</p>
+                    <p class="text-center italic" style="color: var(--text-muted);">Translation results will appear here</p>
                 </div>
             </div>
         </main>
@@ -273,7 +354,297 @@
                 previewContainer.classList.add('hidden');
             }
 
+            // Pastel colors for segments (8 rotating)
+            const pastelColors = [
+                '#FFB3BA', // pink
+                '#BAFFC9', // mint
+                '#BAE1FF', // sky
+                '#FFFFBA', // lemon
+                '#FFD9BA', // peach
+                '#E0BBE4', // lavender
+                '#C9F0FF', // ice
+                '#FFDAB3'  // apricot
+            ];
+
+            // Store results for tooltip interaction
+            let translationResults = [];
+
+            function getPastelColor(index) {
+                return pastelColors[index % pastelColors.length];
+            }
+
+            // Render initial progress UI with pending segments
+            function renderProgressUI(segments) {
+                const resultsDiv = document.getElementById('results');
+                let html = `
+                    <div class="relative">
+                        <div class="progress-container">
+                            <div class="flex justify-between text-sm mb-2">
+                                <span id="progress-label" style="color: var(--text-secondary);">Segmenting...</span>
+                                <span id="progress-count" style="color: var(--text-secondary);"></span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div id="progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <h2 class="text-lg font-semibold mb-4" style="color: var(--text-primary);">Segmented Text</h2>
+                        <div id="segments-container" class="flex flex-wrap gap-1.5 mb-4" style="line-height: var(--leading-segmented);">
+                `;
+
+                segments.forEach((seg, i) => {
+                    html += `
+                        <span class="segment segment-pending inline-block px-2.5 py-1.5 rounded-md border-2 border-transparent"
+                              style="font-family: var(--font-chinese); font-size: var(--text-chinese);"
+                              data-index="${i}">${seg}</span>
+                    `;
+                });
+
+                html += `
+                        </div>
+                        <!-- Floating tooltip overlay -->
+                        <div id="word-tooltip" class="hidden absolute z-50 rounded-lg shadow-xl p-3 min-w-[160px] pointer-events-none" style="background: var(--tooltip-bg);">
+                            <div class="text-sm font-semibold mb-0.5" style="color: var(--tooltip-text);" id="tooltip-pinyin"></div>
+                            <div class="text-xs" style="color: var(--tooltip-text); opacity: 0.8;" id="tooltip-english"></div>
+                            <div class="absolute w-2.5 h-2.5 transform rotate-45 -bottom-1 left-1/2 -translate-x-1/2" style="background: var(--tooltip-bg);"></div>
+                        </div>
+                    </div>
+                `;
+
+                resultsDiv.innerHTML = html;
+            }
+
+            // Update progress bar
+            function updateProgress(current, total) {
+                const progressBar = document.getElementById('progress-bar');
+                const progressLabel = document.getElementById('progress-label');
+                const progressCount = document.getElementById('progress-count');
+
+                const percentage = (current / total) * 100;
+                progressBar.style.width = percentage + '%';
+                progressLabel.textContent = 'Translating...';
+                progressCount.textContent = `${current} / ${total}`;
+            }
+
+            // Update a segment when translation completes
+            function updateSegment(result) {
+                const segment = document.querySelector(`.segment[data-index="${result.index}"]`);
+                if (segment) {
+                    segment.classList.remove('segment-pending', 'segment-translating');
+                    segment.style.background = getPastelColor(result.index);
+                    segment.style.color = 'var(--text-primary)';
+                    segment.style.cursor = 'pointer';
+                    segment.classList.add('transition-all', 'duration-150', 'hover:-translate-y-0.5', 'hover:shadow-md');
+                    segment.dataset.pinyin = result.pinyin;
+                    segment.dataset.english = result.english;
+
+                    // Add hover/click handlers
+                    addSegmentInteraction(segment);
+                }
+
+                // Mark next segment as translating
+                const nextSegment = document.querySelector(`.segment[data-index="${result.index + 1}"]`);
+                if (nextSegment && nextSegment.classList.contains('segment-pending')) {
+                    nextSegment.classList.add('segment-translating');
+                }
+            }
+
+            // Add hover and click interaction to a segment
+            function addSegmentInteraction(segment) {
+                const tooltip = document.getElementById('word-tooltip');
+                const tooltipPinyin = document.getElementById('tooltip-pinyin');
+                const tooltipEnglish = document.getElementById('tooltip-english');
+
+                function showTooltip(seg) {
+                    tooltipPinyin.textContent = seg.dataset.pinyin;
+                    tooltipEnglish.textContent = seg.dataset.english;
+
+                    const segRect = seg.getBoundingClientRect();
+                    const containerRect = seg.closest('.relative').getBoundingClientRect();
+
+                    tooltip.classList.remove('hidden');
+
+                    const left = segRect.left - containerRect.left + (segRect.width / 2) - (tooltip.offsetWidth / 2);
+                    const top = segRect.top - containerRect.top - tooltip.offsetHeight - 8;
+
+                    tooltip.style.left = Math.max(0, left) + 'px';
+                    tooltip.style.top = top + 'px';
+
+                    // Highlight segment
+                    seg.classList.add('border-gray-800', 'shadow-lg');
+                }
+
+                function hideTooltip(seg) {
+                    tooltip.classList.add('hidden');
+                    seg.classList.remove('border-gray-800', 'shadow-lg');
+                }
+
+                segment.addEventListener('mouseenter', () => showTooltip(segment));
+                segment.addEventListener('mouseleave', () => hideTooltip(segment));
+            }
+
+            // Finalize the UI after completion
+            function finalizeUI(results) {
+                translationResults = results;
+
+                // Hide progress bar
+                const progressContainer = document.querySelector('.progress-container');
+                if (progressContainer) {
+                    progressContainer.style.display = 'none';
+                }
+
+                // Build translation table
+                const tableContainer = document.getElementById('translation-table');
+                if (tableContainer) {
+                    let tableHtml = `
+                        <div class="p-5 rounded-2xl" style="background: var(--surface); box-shadow: 0 2px 8px var(--shadow); border: 1px solid var(--border);">
+                            <button id="toggle-details-btn" class="flex items-center justify-between w-full text-left">
+                                <h3 class="text-base font-semibold" style="color: var(--text-primary);">Translation Details</h3>
+                                <span id="toggle-icon" class="text-lg" style="color: var(--text-muted);">+</span>
+                            </button>
+                            <div id="details-content" class="hidden mt-4 overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid var(--border);">
+                                            <th class="py-2 px-3 text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Chinese</th>
+                                            <th class="py-2 px-3 text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Pinyin</th>
+                                            <th class="py-2 px-3 text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">English</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+
+                    results.forEach((item, index) => {
+                        tableHtml += `
+                            <tr class="cursor-pointer translation-row" style="border-bottom: 1px solid var(--background-alt);" data-index="${index}">
+                                <td class="py-2.5 px-3" style="font-family: var(--font-chinese); font-size: var(--text-chinese); color: var(--text-primary);">${item.segment}</td>
+                                <td class="py-2.5 px-3" style="color: var(--text-secondary);">${item.pinyin}</td>
+                                <td class="py-2.5 px-3" style="color: var(--secondary);">${item.english}</td>
+                            </tr>
+                        `;
+                    });
+
+                    tableHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                    tableContainer.innerHTML = tableHtml;
+
+                    // Toggle details visibility
+                    document.getElementById('toggle-details-btn').addEventListener('click', () => {
+                        const content = document.getElementById('details-content');
+                        const icon = document.getElementById('toggle-icon');
+                        content.classList.toggle('hidden');
+                        icon.textContent = content.classList.contains('hidden') ? '+' : '−';
+                    });
+                }
+            }
+
+            // Show error message
+            function showError(message) {
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = `
+                    <div class="p-4 rounded-lg" style="background: var(--error); border-left: 4px solid var(--secondary-dark);">
+                        <p style="color: var(--text-primary);">${message}</p>
+                    </div>
+                `;
+            }
+
+            // Main translation function with SSE
+            async function translateWithProgress(text) {
+                const resultsDiv = document.getElementById('results');
+                const tableContainer = document.getElementById('translation-table');
+
+                // Clear previous results
+                tableContainer.innerHTML = '';
+                resultsDiv.innerHTML = `
+                    <div class="h-full flex items-center justify-center">
+                        <div class="text-center">
+                            <div class="spinner mx-auto mb-3" style="width: 24px; height: 24px; border-color: rgba(124, 158, 178, 0.3); border-top-color: var(--primary);"></div>
+                            <p style="color: var(--text-muted);">Segmenting text...</p>
+                        </div>
+                    </div>
+                `;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('text', text);
+
+                    const response = await fetch('/translate-stream', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop() || '';
+
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const data = JSON.parse(line.slice(6));
+
+                                switch (data.type) {
+                                    case 'start':
+                                        renderProgressUI(data.segments);
+                                        // Mark first segment as translating
+                                        const firstSeg = document.querySelector('.segment[data-index="0"]');
+                                        if (firstSeg) firstSeg.classList.add('segment-translating');
+                                        break;
+
+                                    case 'progress':
+                                        updateProgress(data.current, data.total);
+                                        updateSegment(data.result);
+                                        break;
+
+                                    case 'complete':
+                                        finalizeUI(data.results);
+                                        break;
+
+                                    case 'error':
+                                        showError(data.message);
+                                        break;
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    showError('Translation failed: ' + error.message);
+                }
+            }
+
             document.addEventListener('DOMContentLoaded', function() {
+                // Translate form handler
+                const translateForm = document.getElementById('translate-form');
+                const translateBtn = translateForm.querySelector('button[type="submit"]');
+
+                translateForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const text = document.getElementById('text').value.trim();
+                    if (!text) return;
+
+                    // Show loading state on button
+                    translateBtn.querySelector('.btn-text').classList.add('hidden');
+                    translateBtn.querySelector('.btn-loading').classList.remove('hidden');
+                    translateBtn.disabled = true;
+
+                    await translateWithProgress(text);
+
+                    // Reset button state
+                    translateBtn.querySelector('.btn-text').classList.remove('hidden');
+                    translateBtn.querySelector('.btn-loading').classList.add('hidden');
+                    translateBtn.disabled = false;
+                });
+
+                // Image upload handlers
                 const dropZone = document.getElementById('drop-zone');
                 const fileInput = document.getElementById('image-input');
                 const uploadPrompt = document.getElementById('upload-prompt');

@@ -53,21 +53,24 @@ def mock_segmenter(mock_prediction):
 
 @pytest.fixture
 def mock_translator(mock_prediction):
-    """Mock translator that returns predefined (pinyin, english) tuples for batched segments."""
-    def _translator(segments: list[str]):
-        # Mapping of Chinese segments to translations
-        translation_map = {
-            "你好": ("nǐ hǎo", "hello"),
-            "世界": ("shì jiè", "world"),
-            "我": ("wǒ", "I"),
-            "喜欢": ("xǐ huān", "like"),
-            "编程": ("biān chéng", "programming"),
-            "测试": ("cè shì", "test"),
-            "默认": ("mò rèn", "default"),
-            "段落": ("duàn luò", "paragraph"),
-        }
-        results = [translation_map.get(seg, ("unknown", "unknown")) for seg in segments]
-        return mock_prediction(results=results)
+    """Mock translator that returns pinyin and english for a single segment."""
+    # Mapping of Chinese segments to translations
+    translation_map = {
+        "你好": ("nǐ hǎo", "hello"),
+        "世界": ("shì jiè", "world"),
+        "我": ("wǒ", "I"),
+        "喜欢": ("xǐ huān", "like"),
+        "编程": ("biān chéng", "programming"),
+        "测试": ("cè shì", "test"),
+        "默认": ("mò rèn", "default"),
+        "段落": ("duàn luò", "paragraph"),
+        "你": ("nǐ", "you"),
+        "好": ("hǎo", "good"),
+    }
+
+    def _translator(segment: str, context: str):
+        pinyin, english = translation_map.get(segment, ("unknown", "unknown"))
+        return mock_prediction(pinyin=pinyin, english=english)
 
     mock = Mock()
     mock.side_effect = _translator
@@ -88,7 +91,7 @@ def test_pipeline_initialization():
 
         # Segmenter uses ChainOfThought
         mock_cot.assert_called_once_with(Segmenter)
-        # Translator uses Predict (batched)
+        # Translator uses Predict
         mock_predict.assert_called_once_with(Translator)
 
 
@@ -126,7 +129,7 @@ def test_pipeline_forward_empty_input(mock_prediction):
     """Test pipeline handles empty input gracefully."""
     with patch('dspy.ChainOfThought') as mock_cot, patch('dspy.Predict') as mock_predict:
         empty_segmenter = Mock(return_value=mock_prediction(segments=[]))
-        empty_translator = Mock(return_value=mock_prediction(results=[]))
+        empty_translator = Mock(return_value=mock_prediction(pinyin="", english=""))
 
         mock_cot.return_value = empty_segmenter
         mock_predict.return_value = empty_translator
@@ -137,15 +140,22 @@ def test_pipeline_forward_empty_input(mock_prediction):
         assert len(result) == 0
 
 
-def test_pipeline_uses_actual_prediction_objects():
+def test_pipeline_uses_actual_prediction_objects(mock_prediction):
     """Test with actual DSPy Prediction objects."""
     with patch('dspy.ChainOfThought') as mock_cot, patch('dspy.Predict') as mock_predict:
         # Use real Prediction objects
         segment_pred = dspy.Prediction(segments=["你", "好"])
-        translation_pred = dspy.Prediction(results=[("nǐ", "you"), ("hǎo", "good")])
 
         mock_segmenter = Mock(return_value=segment_pred)
-        mock_translator = Mock(return_value=translation_pred)
+
+        # Mock translator to return different values for each segment
+        def translator_side_effect(segment, context):
+            if segment == "你":
+                return mock_prediction(pinyin="nǐ", english="you")
+            else:
+                return mock_prediction(pinyin="hǎo", english="good")
+
+        mock_translator = Mock(side_effect=translator_side_effect)
 
         mock_cot.return_value = mock_segmenter
         mock_predict.return_value = mock_translator
@@ -153,10 +163,8 @@ def test_pipeline_uses_actual_prediction_objects():
         pipeline = Pipeline()
         result = pipeline.forward("你好")
 
-        # Batched translator called once with all segments
-        mock_translator.assert_called_once()
-        call_kwargs = mock_translator.call_args[1]
-        assert call_kwargs["segments"] == ["你", "好"]
+        # Translator called once per segment
+        assert mock_translator.call_count == 2
 
         # Result is correct list of tuples
         assert len(result) == 2
@@ -164,10 +172,8 @@ def test_pipeline_uses_actual_prediction_objects():
         assert result[1] == ("好", "hǎo", "good")
 
 
-def test_pipeline_translator_called_once_with_all_segments(
-    mock_segmenter, mock_translator
-):
-    """Verify translator is called ONCE with all segments (batched)."""
+def test_pipeline_translator_called_per_segment(mock_segmenter, mock_translator):
+    """Verify translator is called once per segment (not batched)."""
     with patch('dspy.ChainOfThought') as mock_cot, patch('dspy.Predict') as mock_predict:
         mock_cot.return_value = mock_segmenter
         mock_predict.return_value = mock_translator
@@ -175,12 +181,17 @@ def test_pipeline_translator_called_once_with_all_segments(
         pipeline = Pipeline()
         result = pipeline.forward("我喜欢编程")  # 3 segments
 
-        # Translator should be called exactly once (batched)
-        assert mock_translator.call_count == 1
+        # Translator should be called once per segment
+        assert mock_translator.call_count == 3
 
-        # Verify translator called with all segments at once
-        call_kwargs = mock_translator.call_args[1]
-        assert call_kwargs["segments"] == ["我", "喜欢", "编程"]
+        # Verify translator called with each segment and context
+        calls = mock_translator.call_args_list
+        assert calls[0][1]["segment"] == "我"
+        assert calls[0][1]["context"] == "我喜欢编程"
+        assert calls[1][1]["segment"] == "喜欢"
+        assert calls[1][1]["context"] == "我喜欢编程"
+        assert calls[2][1]["segment"] == "编程"
+        assert calls[2][1]["context"] == "我喜欢编程"
 
         # Verify results
         assert len(result) == 3

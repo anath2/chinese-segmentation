@@ -7,7 +7,8 @@ import dspy
 from PIL import Image as PILImage
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
+import json
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -77,9 +78,13 @@ class Segmenter(dspy.Signature):
 class Translator(dspy.Signature):
     """Translate Chinese words to Pinyin and English"""
 
-    segments: list[str] = dspy.InputField(description="List of Chinese words to translate")
-    results: list[tuple[str, str]] = dspy.OutputField(
-        description="List of (pinyin, english) tuples for each word"
+    segment: str = dspy.InputField(description="A segment of chinese text to translate")
+    context: str = dspy.InputField(description="Context of the translation task")
+    pinyin: str = dspy.OutputField(
+        description="Pinyin transliteration of the segment"
+    )
+    english: str = dspy.OutputField(
+        description="English translation of the segment"
     )
 
 
@@ -150,22 +155,22 @@ class Pipeline(dspy.Module):
     def forward(self, text: str) -> list[tuple[str, str, str]]:
         """Sync: Segment and translate Chinese text"""
         segmentation = self.segment(text=text)
-        translation = self.translate(segments=segmentation.segments)
 
-        return [
-            (seg, pinyin, english)
-            for seg, (pinyin, english) in zip(segmentation.segments, translation.results)
-        ]
+        result = []
+        for segment in segmentation.segments:
+            translation = self.translate(segment=segment, context=text)
+            result.append((segment, translation.pinyin, translation.english))
+        return result
 
     async def aforward(self, text: str) -> list[tuple[str, str, str]]:
         """Async: Segment and translate Chinese text"""
         segmentation = await self.segment.acall(text=text)
-        translation = await self.translate.acall(segments=segmentation.segments)
 
-        return [
-            (seg, pinyin, english)
-            for seg, (pinyin, english) in zip(segmentation.segments, translation.results)
-        ]
+        result = []
+        for segment in segmentation.segments:
+            translation = await self.translate.acall(segment=segment, context=text)
+            result.append((segment, translation.pinyin, translation.english))
+        return result
 
 
 # API Endpoints
@@ -219,6 +224,50 @@ async def translate_html(request: Request, text: str = Form(...)):
             "fragments/error.html",
             {"request": request, "message": f"Translation error: {e}"},
         )
+
+
+@app.post("/translate-stream")
+async def translate_stream(text: str = Form(...)):
+    """Stream translation progress via SSE"""
+
+    async def generate():
+        if not text.strip():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Please enter some Chinese text'})}\n\n"
+            return
+
+        try:
+            pipe = get_pipeline()
+
+            # Step 1: Segment
+            segmentation = await pipe.segment.acall(text=text)
+            segments = segmentation.segments
+            total = len(segments)
+
+            # Send segment count and all segments
+            yield f"data: {json.dumps({'type': 'start', 'total': total, 'segments': segments})}\n\n"
+
+            # Step 2: Translate each segment
+            results = []
+            for i, segment in enumerate(segments):
+                translation = await pipe.translate.acall(segment=segment, context=text)
+                result = {
+                    "segment": segment,
+                    "pinyin": translation.pinyin,
+                    "english": translation.english,
+                    "index": i,
+                }
+                results.append(result)
+
+                # Send progress update
+                yield f"data: {json.dumps({'type': 'progress', 'current': i + 1, 'total': total, 'result': result})}\n\n"
+
+            # Send completion
+            yield f"data: {json.dumps({'type': 'complete', 'results': results})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 
 @app.post("/extract-text-html", response_class=HTMLResponse)
