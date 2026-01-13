@@ -368,6 +368,8 @@
 
             // Store results for tooltip interaction
             let translationResults = [];
+            let isClickActive = false;
+            let activeSegment = null;
 
             function getPastelColor(index) {
                 return pastelColors[index % pastelColors.length];
@@ -455,6 +457,11 @@
                 const tooltipEnglish = document.getElementById('tooltip-english');
 
                 function showTooltip(seg) {
+                    // Clear highlight from all segments
+                    document.querySelectorAll('.segment').forEach(s => {
+                        s.classList.remove('border-gray-800', 'shadow-lg');
+                    });
+
                     tooltipPinyin.textContent = seg.dataset.pinyin;
                     tooltipEnglish.textContent = seg.dataset.english;
 
@@ -469,17 +476,45 @@
                     tooltip.style.left = Math.max(0, left) + 'px';
                     tooltip.style.top = top + 'px';
 
-                    // Highlight segment
                     seg.classList.add('border-gray-800', 'shadow-lg');
                 }
 
-                function hideTooltip(seg) {
+                function hideTooltip() {
                     tooltip.classList.add('hidden');
-                    seg.classList.remove('border-gray-800', 'shadow-lg');
+                    document.querySelectorAll('.segment').forEach(s => {
+                        s.classList.remove('border-gray-800', 'shadow-lg');
+                    });
                 }
 
-                segment.addEventListener('mouseenter', () => showTooltip(segment));
-                segment.addEventListener('mouseleave', () => hideTooltip(segment));
+                // Hover: show tooltip (only if not pinned)
+                segment.addEventListener('mouseenter', () => {
+                    if (!isClickActive) {
+                        showTooltip(segment);
+                    }
+                });
+
+                // Hover out: hide tooltip (only if not pinned)
+                segment.addEventListener('mouseleave', () => {
+                    if (!isClickActive) {
+                        hideTooltip();
+                    }
+                });
+
+                // Click/tap: toggle pinned state
+                segment.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (isClickActive && activeSegment === segment) {
+                        // Same segment clicked again - unpin
+                        isClickActive = false;
+                        activeSegment = null;
+                        hideTooltip();
+                    } else {
+                        // Pin this segment
+                        isClickActive = true;
+                        activeSegment = segment;
+                        showTooltip(segment);
+                    }
+                });
             }
 
             // Finalize the UI after completion
@@ -558,6 +593,8 @@
 
                 // Clear previous results
                 tableContainer.innerHTML = '';
+                isClickActive = false;
+                activeSegment = null;
                 resultsDiv.innerHTML = `
                     <div class="h-full flex items-center justify-center">
                         <div class="text-center">
@@ -694,6 +731,21 @@
                     };
                     reader.readAsDataURL(file);
                 }
+
+                // Click outside segments to dismiss pinned tooltip
+                document.addEventListener('click', (e) => {
+                    if (isClickActive && !e.target.classList.contains('segment')) {
+                        isClickActive = false;
+                        activeSegment = null;
+                        const tooltip = document.getElementById('word-tooltip');
+                        if (tooltip) {
+                            tooltip.classList.add('hidden');
+                        }
+                        document.querySelectorAll('.segment').forEach(s => {
+                            s.classList.remove('border-gray-800', 'shadow-lg');
+                        });
+                    }
+                });
             });
         </script>
     </div>
