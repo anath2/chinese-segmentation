@@ -174,6 +174,12 @@ class Pipeline(dspy.Module):
 
 
 # API Endpoints
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
+    return {"status": "ok"}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def homepage(request: Request):
     """Serve the main page with the translation form"""
