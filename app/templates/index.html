@@ -61,16 +61,20 @@
             --font-body: "Inter", "SF Pro Display", system-ui, sans-serif;
             --font-mono: "JetBrains Mono", "Fira Code", monospace;
 
-            /* Font sizes */
-            --text-chinese: 1.4rem;
-            --text-base: 1rem;
-            --text-sm: 0.875rem;
-            --text-lg: 1.25rem;
-            --text-xl: 1.5rem;
+            /* Font sizes - smaller, refined */
+            --text-xs: 0.7rem;
+            --text-chinese: 1.2rem;
+            --text-base: 0.875rem;
+            --text-sm: 0.75rem;
+            --text-lg: 1rem;
+            --text-xl: 1.125rem;
+            --text-2xl: 1.5rem;
 
             /* Line heights */
-            --leading-segmented: 2.8;
+            --leading-tight: 1.25;
+            --leading-segmented: 2.4;
             --leading-normal: 1.5;
+            --leading-relaxed: 1.75;
         }
 
         body {
@@ -93,8 +97,8 @@
         .segment:nth-child(8n+8) { background: var(--pastel-8); }
 
         .spinner {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-top-color: white;
             border-radius: 50%;
@@ -111,17 +115,17 @@
 
         .input-card {
             background: var(--surface);
-            border-radius: 16px;
-            box-shadow: 0 2px 8px var(--shadow);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px var(--shadow);
             border: 1px solid var(--border);
         }
 
         .textarea-main {
             font-family: var(--font-chinese);
             font-size: var(--text-chinese);
-            line-height: 1.8;
-            border: 2px solid var(--border);
-            border-radius: 12px;
+            line-height: 1.6;
+            border: 1px solid var(--border);
+            border-radius: 8px;
             transition: all 0.2s ease;
         }
 
@@ -132,10 +136,10 @@
         }
 
         .image-upload-zone {
-            border: 2px dashed var(--border);
-            border-radius: 12px;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
             background: var(--background-alt);
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
         .image-upload-zone:hover {
@@ -145,31 +149,32 @@
 
         .image-upload-zone.drag-over {
             border-color: var(--primary);
-            background: rgba(124, 158, 178, 0.08);
+            background: rgba(124, 158, 178, 0.06);
         }
 
         .btn-primary {
             background: var(--primary);
             color: white;
-            border-radius: 10px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 8px rgba(124, 158, 178, 0.3);
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: var(--text-sm);
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(124, 158, 178, 0.2);
         }
 
         .btn-primary:hover {
             background: var(--primary-dark);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(124, 158, 178, 0.4);
+            box-shadow: 0 2px 6px rgba(124, 158, 178, 0.3);
         }
 
         .btn-secondary {
             background: transparent;
             color: var(--text-secondary);
             border: 1px solid var(--border);
-            border-radius: 8px;
+            border-radius: 6px;
             font-weight: 500;
-            transition: all 0.2s ease;
+            font-size: var(--text-sm);
+            transition: all 0.15s ease;
         }
 
         .btn-secondary:hover {
@@ -180,11 +185,11 @@
         .section-divider {
             display: flex;
             align-items: center;
-            gap: 12px;
-            color: var(--text-secondary);
-            font-size: 0.8rem;
+            gap: 10px;
+            color: var(--text-muted);
+            font-size: var(--text-xs);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.08em;
         }
 
         .section-divider::before,
@@ -197,21 +202,21 @@
 
         /* Progress bar styles */
         .progress-container {
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .progress-bar-bg {
             width: 100%;
-            height: 6px;
+            height: 4px;
             background: var(--border);
-            border-radius: 3px;
+            border-radius: 2px;
             overflow: hidden;
         }
 
         .progress-bar-fill {
             height: 100%;
             background: var(--primary);
-            border-radius: 3px;
+            border-radius: 2px;
             transition: width 0.3s ease;
         }
 
@@ -240,40 +245,40 @@
     </style>
 </head>
 <body class="min-h-screen">
-    <div class="container mx-auto px-4 py-10 max-w-7xl">
-        <header class="text-center mb-10">
-            <h1 class="font-chinese text-4xl font-semibold mb-3" style="color: var(--text-primary);">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="mb-8">
+            <h1 class="font-chinese font-semibold mb-1" style="color: var(--text-primary); font-size: var(--text-2xl);">
                 Chinese Text Transcriber
             </h1>
-            <p class="text-lg" style="color: var(--text-secondary);">
+            <p style="color: var(--text-secondary); font-size: var(--text-base);">
                 Enter Chinese text to get word segmentation, pinyin, and English translation
             </p>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <!-- Left Column: Unified Input -->
-            <div class="space-y-6">
-                <div class="input-card p-6 h-[100%]">
+            <div class="space-y-4">
+                <div class="input-card p-5 h-[100%]">
                     <!-- Text Input Form -->
                     <form id="translate-form">
 
-                        <div class="mb-5">
-                            <label for="text" class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                        <div class="mb-4">
+                            <label for="text" class="block font-medium mb-1.5" style="color: var(--text-primary); font-size: var(--text-sm);">
                                 Chinese Text
                             </label>
                             <textarea
                                 id="text"
                                 name="text"
-                                rows="6"
+                                rows="5"
                                 placeholder="Enter Chinese text here, e.g., 你好世界"
                                 required
-                                class="textarea-main w-full px-4 py-3 resize-y"
+                                class="textarea-main w-full px-3 py-2.5 resize-y"
                             ></textarea>
                         </div>
 
-                        <button type="submit" class="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 min-w-[140px]">
+                        <button type="submit" class="btn-primary inline-flex items-center justify-center gap-1.5 px-4 py-2 min-w-[110px]">
                             <span class="btn-text">Translate</span>
-                            <span class="btn-loading hidden items-center gap-2">
+                            <span class="btn-loading hidden items-center gap-1.5">
                                 <span class="spinner"></span>
                                 Translating...
                             </span>
@@ -281,7 +286,7 @@
                     </form>
 
                     <!-- Divider -->
-                    <div class="section-divider my-6">
+                    <div class="section-divider my-5">
                         <span>or extract from image</span>
                     </div>
 
@@ -292,7 +297,7 @@
                           hx-swap="innerHTML"
                           hx-encoding="multipart/form-data">
 
-                        <div id="drop-zone" class="image-upload-zone p-6 text-center cursor-pointer">
+                        <div id="drop-zone" class="image-upload-zone p-4 text-center cursor-pointer">
                             <input type="file"
                                    id="image-input"
                                    name="file"
@@ -300,29 +305,29 @@
                                    class="hidden">
 
                             <div id="upload-prompt">
-                                <svg class="mx-auto h-10 w-10 mb-3" style="color: var(--text-muted);" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <svg class="mx-auto h-8 w-8 mb-2" style="color: var(--text-muted);" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
-                                <p class="text-sm font-medium" style="color: var(--text-secondary);">
+                                <p class="font-medium" style="color: var(--text-secondary); font-size: var(--text-sm);">
                                     Drop an image here or click to upload
                                 </p>
-                                <p class="mt-1 text-xs" style="color: var(--text-muted);">
+                                <p class="mt-0.5" style="color: var(--text-muted); font-size: var(--text-xs);">
                                     PNG, JPG, JPEG, WebP, GIF (max 5MB)
                                 </p>
                             </div>
 
                             <div id="preview-container" class="hidden">
-                                <img id="image-preview" class="max-h-40 mx-auto rounded-lg shadow-sm">
-                                <p id="file-name" class="mt-3 text-sm font-medium" style="color: var(--text-primary);"></p>
-                                <div class="mt-3 flex items-center justify-center gap-3">
-                                    <button type="submit" class="btn-secondary px-4 py-2 text-sm inline-flex items-center gap-2">
+                                <img id="image-preview" class="max-h-32 mx-auto rounded-md shadow-sm">
+                                <p id="file-name" class="mt-2 font-medium" style="color: var(--text-primary); font-size: var(--text-sm);"></p>
+                                <div class="mt-2 flex items-center justify-center gap-2">
+                                    <button type="submit" class="btn-secondary px-3 py-1.5 inline-flex items-center gap-1.5">
                                         <span class="btn-text">Extract Text</span>
-                                        <span class="btn-loading hidden items-center gap-2">
+                                        <span class="btn-loading hidden items-center gap-1.5">
                                             <span class="spinner" style="border-color: rgba(99, 110, 114, 0.3); border-top-color: var(--text-secondary);"></span>
                                             Extracting...
                                         </span>
                                     </button>
-                                    <button type="button" onclick="clearPreview()" class="text-xs hover:underline" style="color: var(--primary);">
+                                    <button type="button" onclick="clearPreview()" class="hover:underline" style="color: var(--primary); font-size: var(--text-xs);">
                                         Remove
                                     </button>
                                 </div>
@@ -336,9 +341,9 @@
             </div>
 
             <!-- Right Column: Segmented Output -->
-            <div id="results" class="input-card h-[100%] overflow-y-auto p-6">
+            <div id="results" class="input-card h-[100%] overflow-y-auto p-5">
                 <div class="h-full flex items-center justify-center">
-                    <p class="text-center italic" style="color: var(--text-muted);">Translation results will appear here</p>
+                    <p class="text-center italic" style="color: var(--text-muted); font-size: var(--text-sm);">Translation results will appear here</p>
                 </div>
             </div>
         </main>
@@ -381,7 +386,7 @@
                 let html = `
                     <div class="relative">
                         <div class="progress-container">
-                            <div class="flex justify-between text-sm mb-2">
+                            <div class="flex justify-between mb-1.5" style="font-size: var(--text-xs);">
                                 <span id="progress-label" style="color: var(--text-secondary);">Segmenting...</span>
                                 <span id="progress-count" style="color: var(--text-secondary);"></span>
                             </div>
@@ -389,19 +394,19 @@
                                 <div id="progress-bar" class="progress-bar-fill" style="width: 0%"></div>
                             </div>
                         </div>
-                        <h2 class="text-lg font-semibold mb-4" style="color: var(--text-primary);">Segmented Text</h2>
+                        <h2 class="font-semibold mb-3" style="color: var(--text-primary); font-size: var(--text-lg);">Segmented Text</h2>
                         <div id="segments-container">
                 `;
 
                 let globalIndex = 0;
                 paragraphs.forEach((para, paraIdx) => {
-                    const marginBottom = para.separator ? para.separator.split('\n').length * 0.5 : 0;
-                    html += `<div class="paragraph flex flex-wrap gap-1.5" style="margin-bottom: ${marginBottom}rem;">`;
+                    const marginBottom = para.separator ? para.separator.split('\n').length * 0.4 : 0;
+                    html += `<div class="paragraph flex flex-wrap gap-1" style="margin-bottom: ${marginBottom}rem;">`;
 
                     // Create placeholder segments based on segment_count
                     for (let i = 0; i < para.segment_count; i++) {
                         html += `
-                            <span class="segment segment-pending inline-block px-2.5 py-1.5 rounded-md border-2 border-transparent"
+                            <span class="segment segment-pending inline-block px-2 py-1 rounded border-2 border-transparent"
                                   style="font-family: var(--font-chinese); font-size: var(--text-chinese);"
                                   data-index="${globalIndex}"
                                   data-paragraph="${paraIdx}">Loading...</span>
@@ -415,10 +420,10 @@
                 html += `
                         </div>
                         <!-- Floating tooltip overlay -->
-                        <div id="word-tooltip" class="hidden absolute z-50 rounded-lg shadow-xl p-3 min-w-[160px] pointer-events-none" style="background: var(--tooltip-bg);">
-                            <div class="text-sm font-semibold mb-0.5" style="color: var(--tooltip-text);" id="tooltip-pinyin"></div>
-                            <div class="text-xs" style="color: var(--tooltip-text); opacity: 0.8;" id="tooltip-english"></div>
-                            <div class="absolute w-2.5 h-2.5 transform rotate-45 -bottom-1 left-1/2 -translate-x-1/2" style="background: var(--tooltip-bg);"></div>
+                        <div id="word-tooltip" class="hidden absolute z-50 rounded-md shadow-lg p-2 min-w-[140px] pointer-events-none" style="background: var(--tooltip-bg);">
+                            <div class="font-semibold mb-0.5" style="color: var(--tooltip-text); font-size: var(--text-sm);" id="tooltip-pinyin"></div>
+                            <div style="color: var(--tooltip-text); opacity: 0.8; font-size: var(--text-xs);" id="tooltip-english"></div>
+                            <div class="absolute w-2 h-2 transform rotate-45 -bottom-1 left-1/2 -translate-x-1/2" style="background: var(--tooltip-bg);"></div>
                         </div>
                     </div>
                 `;
@@ -447,7 +452,7 @@
                     segment.style.background = getPastelColor(result.index);
                     segment.style.color = 'var(--text-primary)';
                     segment.style.cursor = 'pointer';
-                    segment.classList.add('transition-all', 'duration-150', 'hover:-translate-y-0.5', 'hover:shadow-md');
+                    segment.classList.add('transition-all', 'duration-150', 'hover:-translate-y-px', 'hover:shadow-sm');
                     segment.dataset.pinyin = result.pinyin;
                     segment.dataset.english = result.english;
 
@@ -545,18 +550,18 @@
                 const tableContainer = document.getElementById('translation-table');
                 if (tableContainer) {
                     let tableHtml = `
-                        <div class="p-5 rounded-2xl" style="background: var(--surface); box-shadow: 0 2px 8px var(--shadow); border: 1px solid var(--border);">
+                        <div class="p-4 rounded-xl" style="background: var(--surface); box-shadow: 0 1px 3px var(--shadow); border: 1px solid var(--border);">
                             <button id="toggle-details-btn" class="flex items-center justify-between w-full text-left">
-                                <h3 class="text-base font-semibold" style="color: var(--text-primary);">Translation Details</h3>
-                                <span id="toggle-icon" class="text-lg" style="color: var(--text-muted);">+</span>
+                                <h3 class="font-semibold" style="color: var(--text-primary); font-size: var(--text-base);">Translation Details</h3>
+                                <span id="toggle-icon" style="color: var(--text-muted); font-size: var(--text-lg);">+</span>
                             </button>
-                            <div id="details-content" class="hidden mt-4 overflow-x-auto">
+                            <div id="details-content" class="hidden mt-3 overflow-x-auto">
                                 <table class="w-full text-left">
                                     <thead>
                                         <tr style="border-bottom: 1px solid var(--border);">
-                                            <th class="py-2 px-3 text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Chinese</th>
-                                            <th class="py-2 px-3 text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Pinyin</th>
-                                            <th class="py-2 px-3 text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">English</th>
+                                            <th class="py-1.5 px-2 font-semibold uppercase tracking-wider" style="color: var(--text-muted); font-size: var(--text-xs);">Chinese</th>
+                                            <th class="py-1.5 px-2 font-semibold uppercase tracking-wider" style="color: var(--text-muted); font-size: var(--text-xs);">Pinyin</th>
+                                            <th class="py-1.5 px-2 font-semibold uppercase tracking-wider" style="color: var(--text-muted); font-size: var(--text-xs);">English</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -565,9 +570,9 @@
                     results.forEach((item, index) => {
                         tableHtml += `
                             <tr class="cursor-pointer translation-row" style="border-bottom: 1px solid var(--background-alt);" data-index="${index}">
-                                <td class="py-2.5 px-3" style="font-family: var(--font-chinese); font-size: var(--text-chinese); color: var(--text-primary);">${item.segment}</td>
-                                <td class="py-2.5 px-3" style="color: var(--text-secondary);">${item.pinyin}</td>
-                                <td class="py-2.5 px-3" style="color: var(--secondary);">${item.english}</td>
+                                <td class="py-2 px-2" style="font-family: var(--font-chinese); font-size: var(--text-chinese); color: var(--text-primary);">${item.segment}</td>
+                                <td class="py-2 px-2" style="color: var(--text-secondary); font-size: var(--text-sm);">${item.pinyin}</td>
+                                <td class="py-2 px-2" style="color: var(--secondary-dark); font-size: var(--text-sm);">${item.english}</td>
                             </tr>
                         `;
                     });
@@ -594,8 +599,8 @@
             function showError(message) {
                 const resultsDiv = document.getElementById('results');
                 resultsDiv.innerHTML = `
-                    <div class="p-4 rounded-lg" style="background: var(--error); border-left: 4px solid var(--secondary-dark);">
-                        <p style="color: var(--text-primary);">${message}</p>
+                    <div class="p-3 rounded-md" style="background: var(--error); border-left: 3px solid var(--secondary-dark);">
+                        <p style="color: var(--text-primary); font-size: var(--text-sm);">${message}</p>
                     </div>
                 `;
             }
@@ -612,8 +617,8 @@
                 resultsDiv.innerHTML = `
                     <div class="h-full flex items-center justify-center">
                         <div class="text-center">
-                            <div class="spinner mx-auto mb-3" style="width: 24px; height: 24px; border-color: rgba(124, 158, 178, 0.3); border-top-color: var(--primary);"></div>
-                            <p style="color: var(--text-muted);">Segmenting text...</p>
+                            <div class="spinner mx-auto mb-2" style="width: 20px; height: 20px; border-color: rgba(124, 158, 178, 0.3); border-top-color: var(--primary);"></div>
+                            <p style="color: var(--text-muted); font-size: var(--text-sm);">Segmenting text...</p>
                         </div>
                     </div>
                 `;
