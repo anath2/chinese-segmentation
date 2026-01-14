@@ -1,5 +1,7 @@
 import io
 import os
+import re
+import unicodedata
 from pathlib import Path
 from threading import Lock
 
@@ -144,6 +146,51 @@ async def extract_text_from_image(image_bytes: bytes) -> str:
     return result.chinese_text
 
 
+def should_skip_translation(segment: str) -> bool:
+    """
+    Check if a segment should skip translation.
+    Returns True if segment contains only:
+    - Whitespace
+    - ASCII punctuation/symbols
+    - ASCII digits
+    - Chinese punctuation
+    - Full-width numbers and symbols
+    """
+    if not segment or not segment.strip():
+        return True
+
+    # Define Chinese punctuation marks
+    chinese_punctuation = "。，、；：？！""''（）【】《》…—·「」『』〈〉〔〕"
+
+    for char in segment:
+        # Skip whitespace
+        if char.isspace():
+            continue
+
+        # Check if it's ASCII punctuation, symbol, or digit
+        if char.isascii() and not char.isalpha():
+            continue
+
+        # Check if it's Chinese punctuation
+        if char in chinese_punctuation:
+            continue
+
+        # Check if it's a full-width number or symbol (Unicode category)
+        category = unicodedata.category(char)
+        if category in ('Nd', 'No', 'Po', 'Ps', 'Pe', 'Pd', 'Pc', 'Sk', 'Sm', 'So'):
+            # Nd: Decimal number, No: Other number
+            # Po: Other punctuation, Ps: Open punctuation, Pe: Close punctuation
+            # Pd: Dash punctuation, Pc: Connector punctuation
+            # Sk: Modifier symbol, Sm: Math symbol, So: Other symbol
+            continue
+
+        # If we found a character that's not punctuation/number/symbol, don't skip
+        return False
+
+    # All characters are punctuation/numbers/symbols
+    return True
+
+
 # Pipeline Definition
 class Pipeline(dspy.Module):
     """Pipeline for Chinese text processing"""
@@ -158,8 +205,12 @@ class Pipeline(dspy.Module):
 
         result = []
         for segment in segmentation.segments:
-            translation = self.translate(segment=segment, context=text)
-            result.append((segment, translation.pinyin, translation.english))
+            # Skip translation for segments with only symbols, numbers, and punctuation
+            if should_skip_translation(segment):
+                result.append((segment, "", ""))
+            else:
+                translation = self.translate(segment=segment, context=text)
+                result.append((segment, translation.pinyin, translation.english))
         return result
 
     async def aforward(self, text: str) -> list[tuple[str, str, str]]:
@@ -168,8 +219,12 @@ class Pipeline(dspy.Module):
 
         result = []
         for segment in segmentation.segments:
-            translation = await self.translate.acall(segment=segment, context=text)
-            result.append((segment, translation.pinyin, translation.english))
+            # Skip translation for segments with only symbols, numbers, and punctuation
+            if should_skip_translation(segment):
+                result.append((segment, "", ""))
+            else:
+                translation = await self.translate.acall(segment=segment, context=text)
+                result.append((segment, translation.pinyin, translation.english))
         return result
 
 
@@ -255,13 +310,22 @@ async def translate_stream(text: str = Form(...)):
             # Step 2: Translate each segment
             results = []
             for i, segment in enumerate(segments):
-                translation = await pipe.translate.acall(segment=segment, context=text)
-                result = {
-                    "segment": segment,
-                    "pinyin": translation.pinyin,
-                    "english": translation.english,
-                    "index": i,
-                }
+                # Skip translation for segments with only symbols, numbers, and punctuation
+                if should_skip_translation(segment):
+                    result = {
+                        "segment": segment,
+                        "pinyin": "",
+                        "english": "",
+                        "index": i,
+                    }
+                else:
+                    translation = await pipe.translate.acall(segment=segment, context=text)
+                    result = {
+                        "segment": segment,
+                        "pinyin": translation.pinyin,
+                        "english": translation.english,
+                        "index": i,
+                    }
                 results.append(result)
 
                 # Send progress update

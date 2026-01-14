@@ -14,7 +14,7 @@ os.environ.setdefault("OPENROUTER_API_KEY", "test-key-for-testing")
 os.environ.setdefault("OPENROUTER_MODEL", "test-model")
 
 import dspy
-from app.server import Pipeline, Segmenter, Translator
+from app.server import Pipeline, Segmenter, Translator, should_skip_translation
 
 
 # ============================================================================
@@ -80,6 +80,61 @@ def mock_translator(mock_prediction):
 # ============================================================================
 # TEST CASES
 # ============================================================================
+
+def test_should_skip_translation():
+    """Test the should_skip_translation helper function."""
+    # Should skip: empty string and whitespace
+    assert should_skip_translation("") is True
+    assert should_skip_translation("   ") is True
+    assert should_skip_translation("\n\t") is True
+
+    # Should skip: ASCII punctuation and symbols
+    assert should_skip_translation(",") is True
+    assert should_skip_translation("!") is True
+    assert should_skip_translation("?") is True
+    assert should_skip_translation(".") is True
+    assert should_skip_translation("...") is True
+    assert should_skip_translation("@#$%") is True
+
+    # Should skip: ASCII numbers
+    assert should_skip_translation("123") is True
+    assert should_skip_translation("0") is True
+    assert should_skip_translation("3.14") is True
+
+    # Should skip: Chinese punctuation
+    assert should_skip_translation("，") is True  # Chinese comma
+    assert should_skip_translation("。") is True  # Chinese period
+    assert should_skip_translation("！") is True  # Chinese exclamation
+    assert should_skip_translation("？") is True  # Chinese question mark
+    assert should_skip_translation("、") is True  # Chinese enumeration comma
+    assert should_skip_translation("；") is True  # Chinese semicolon
+    assert should_skip_translation("：") is True  # Chinese colon
+    assert should_skip_translation('"') is True  # Chinese quote
+    assert should_skip_translation("'") is True  # Chinese quote
+    assert should_skip_translation("（") is True  # Chinese left paren
+    assert should_skip_translation("）") is True  # Chinese right paren
+    assert should_skip_translation("【") is True  # Chinese bracket
+    assert should_skip_translation("】") is True  # Chinese bracket
+
+    # Should skip: mixed punctuation and numbers
+    assert should_skip_translation("123,456") is True
+    assert should_skip_translation("...!!!") is True
+    assert should_skip_translation("，。、") is True
+
+    # Should NOT skip: Chinese characters
+    assert should_skip_translation("你好") is False
+    assert should_skip_translation("世界") is False
+    assert should_skip_translation("我") is False
+
+    # Should NOT skip: mixed Chinese and punctuation (contains Chinese)
+    assert should_skip_translation("你好，") is False
+    assert should_skip_translation("，你好") is False
+    assert should_skip_translation("123你好") is False
+
+    # Should NOT skip: ASCII letters
+    assert should_skip_translation("hello") is False
+    assert should_skip_translation("a") is False
+
 
 def test_pipeline_initialization():
     """Verify Pipeline initializes with correct DSPy modules."""
@@ -195,3 +250,47 @@ def test_pipeline_translator_called_per_segment(mock_segmenter, mock_translator)
 
         # Verify results
         assert len(result) == 3
+
+
+def test_pipeline_skips_punctuation_and_symbols(mock_prediction):
+    """Verify pipeline skips translation for symbols, numbers, and punctuation."""
+    with patch('dspy.ChainOfThought') as mock_cot, patch('dspy.Predict') as mock_predict:
+        # Create a segmenter that returns mixed segments (Chinese words and punctuation)
+        def custom_segmenter(text):
+            # Simulate segmentation of: "你好，世界！123"
+            # Should segment to: ["你好", "，", "世界", "！", "123"]
+            return mock_prediction(segments=["你好", "，", "世界", "！", "123"])
+
+        mock_seg = Mock(side_effect=custom_segmenter)
+
+        # Mock translator - should only be called for actual Chinese words
+        def custom_translator(segment, context):
+            if segment == "你好":
+                return mock_prediction(pinyin="nǐ hǎo", english="hello")
+            elif segment == "世界":
+                return mock_prediction(pinyin="shì jiè", english="world")
+            else:
+                return mock_prediction(pinyin="", english="")
+
+        mock_trans = Mock(side_effect=custom_translator)
+
+        mock_cot.return_value = mock_seg
+        mock_predict.return_value = mock_trans
+
+        pipeline = Pipeline()
+        result = pipeline.forward("你好，世界！123")
+
+        # Should return all 5 segments
+        assert len(result) == 5
+
+        # Chinese words should have translations
+        assert result[0] == ("你好", "nǐ hǎo", "hello")
+        assert result[2] == ("世界", "shì jiè", "world")
+
+        # Punctuation and numbers should have empty translations
+        assert result[1] == ("，", "", "")  # Chinese comma
+        assert result[3] == ("！", "", "")  # Chinese exclamation
+        assert result[4] == ("123", "", "")  # Numbers
+
+        # Translator should only be called twice (for Chinese words, not for punctuation/numbers)
+        assert mock_trans.call_count == 2
