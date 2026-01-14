@@ -42,6 +42,8 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 # Initialize pipeline with thread-safe lazy initialization
 _pipeline_lock = Lock()
 pipeline = None
+_full_translation_lock = Lock()
+full_translation_model = None
 
 
 def get_pipeline():
@@ -52,6 +54,16 @@ def get_pipeline():
             if pipeline is None:
                 pipeline = Pipeline()
     return pipeline
+
+
+def get_full_translator():
+    """Thread-safe lazy initialization for full-text translation"""
+    global full_translation_model
+    if full_translation_model is None:
+        with _full_translation_lock:
+            if full_translation_model is None:
+                full_translation_model = dspy.ChainOfThought(FullTranslator)
+    return full_translation_model
 
 
 # Request/Response Models
@@ -93,6 +105,13 @@ class Translator(dspy.Signature):
     english: str = dspy.OutputField(
         description="English translation of the segment"
     )
+
+
+class FullTranslator(dspy.Signature):
+    """Translate full Chinese text into English for reference"""
+
+    text: str = dspy.InputField(description="Full Chinese text to translate")
+    english: str = dspy.OutputField(description="English translation of the full text")
 
 
 class OCRExtractor(dspy.Signature):
@@ -355,6 +374,11 @@ async def translate_stream(text: str = Form(...)):
 
         try:
             pipe = get_pipeline()
+            full_translator = get_full_translator()
+
+            # Full-text translation (separate from pipeline)
+            full_translation_result = await full_translator.acall(text=text)
+            full_translation = full_translation_result.english
 
             # Split text into paragraphs
             paragraphs = split_into_paragraphs(text)
@@ -372,7 +396,7 @@ async def translate_stream(text: str = Form(...)):
 
             # Send initial info with paragraph structure
             paragraph_info = [{'segment_count': len(p['segments']), 'separator': p['separator']} for p in all_paragraph_segments]
-            yield f"data: {json.dumps({'type': 'start', 'total': total_segments, 'paragraphs': paragraph_info})}\n\n"
+            yield f"data: {json.dumps({'type': 'start', 'total': total_segments, 'paragraphs': paragraph_info, 'fullTranslation': full_translation})}\n\n"
 
             # Step 2: Translate each segment in each paragraph
             global_index = 0
@@ -413,7 +437,7 @@ async def translate_stream(text: str = Form(...)):
                 })
 
             # Send completion with paragraph structure
-            yield f"data: {json.dumps({'type': 'complete', 'paragraphs': all_results})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'paragraphs': all_results, 'fullTranslation': full_translation})}\n\n"
 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"

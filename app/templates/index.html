@@ -30,6 +30,7 @@
             --text-primary: #2D3436;
             --text-secondary: #636E72;
             --text-muted: #B2BEC3;
+            --translation-color: #6b5b95;
 
             /* Segment colors (8 rotating) */
             --pastel-1: #FFB3BA; /* pink */
@@ -127,6 +128,18 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             transition: all 0.2s ease;
+        }
+
+        .textarea-main::placeholder {
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+        }
+
+        .full-translation {
+            color: var(--translation-color);
+            font-size: var(--text-base);
+            line-height: var(--leading-relaxed);
+            font-weight: 500;
         }
 
         .textarea-main:focus {
@@ -381,10 +394,19 @@
             }
 
             // Render initial progress UI with pending segments (paragraph-aware)
-            function renderProgressUI(paragraphs, totalSegments) {
+            function renderProgressUI(paragraphs, totalSegments, fullTranslation = '') {
                 const resultsDiv = document.getElementById('results');
                 let html = `
-                    <div class="relative">
+                    <div class="relative space-y-3">
+                        <div class="space-y-1">
+                            <h2 class="font-semibold" style="color: var(--text-primary); font-size: var(--text-lg);">Translation</h2>
+                            <p id="full-translation" class="full-translation">Translating...</p>
+                        </div>
+
+                        <div class="section-divider my-3">
+                            <span>Segmented Text</span>
+                        </div>
+
                         <div class="progress-container">
                             <div class="flex justify-between mb-1.5" style="font-size: var(--text-xs);">
                                 <span id="progress-label" style="color: var(--text-secondary);">Segmenting...</span>
@@ -429,6 +451,11 @@
                 `;
 
                 resultsDiv.innerHTML = html;
+
+                const translationEl = document.getElementById('full-translation');
+                if (translationEl) {
+                    translationEl.textContent = fullTranslation || 'Translating...';
+                }
             }
 
             // Update progress bar
@@ -650,7 +677,7 @@
 
                                 switch (data.type) {
                                     case 'start':
-                                        renderProgressUI(data.paragraphs, data.total);
+                                        renderProgressUI(data.paragraphs, data.total, data.fullTranslation);
                                         // Mark first segment as translating
                                         const firstSeg = document.querySelector('.segment[data-index="0"]');
                                         if (firstSeg) firstSeg.classList.add('segment-translating');
@@ -663,6 +690,12 @@
 
                                     case 'complete':
                                         finalizeUI(data.paragraphs);
+                                        if (data.fullTranslation) {
+                                            const translationEl = document.getElementById('full-translation');
+                                            if (translationEl) {
+                                                translationEl.textContent = data.fullTranslation;
+                                            }
+                                        }
                                         break;
 
                                     case 'error':
