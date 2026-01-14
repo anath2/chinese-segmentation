@@ -14,7 +14,7 @@ os.environ.setdefault("OPENROUTER_API_KEY", "test-key-for-testing")
 os.environ.setdefault("OPENROUTER_MODEL", "test-model")
 
 import dspy
-from app.server import Pipeline, Segmenter, Translator, should_skip_translation
+from app.server import Pipeline, Segmenter, Translator, should_skip_translation, split_into_paragraphs
 
 
 # ============================================================================
@@ -134,6 +134,57 @@ def test_should_skip_translation():
     # Should NOT skip: ASCII letters
     assert should_skip_translation("hello") is False
     assert should_skip_translation("a") is False
+
+
+def test_split_into_paragraphs():
+    """Test the split_into_paragraphs helper function."""
+    # Empty string
+    assert split_into_paragraphs("") == []
+
+    # Single line
+    result = split_into_paragraphs("你好世界")
+    assert len(result) == 1
+    assert result[0]['content'] == "你好世界"
+    assert result[0]['separator'] == ""
+
+    # Two lines with single newline
+    result = split_into_paragraphs("你好\n世界")
+    assert len(result) == 2
+    assert result[0]['content'] == "你好"
+    assert result[0]['separator'] == "\n"
+    assert result[1]['content'] == "世界"
+    assert result[1]['separator'] == ""
+
+    # Two lines with double newline (paragraph break)
+    result = split_into_paragraphs("你好\n\n世界")
+    assert len(result) == 2
+    assert result[0]['content'] == "你好"
+    assert result[0]['separator'] == "\n\n"
+    assert result[1]['content'] == "世界"
+    assert result[1]['separator'] == ""
+
+    # Three paragraphs with varying separators
+    result = split_into_paragraphs("第一段\n第二段\n\n第三段")
+    assert len(result) == 3
+    assert result[0]['content'] == "第一段"
+    assert result[0]['separator'] == "\n"
+    assert result[1]['content'] == "第二段"
+    assert result[1]['separator'] == "\n\n"
+    assert result[2]['content'] == "第三段"
+    assert result[2]['separator'] == ""
+
+    # Whitespace-only lines should be skipped in content but counted in separators
+    result = split_into_paragraphs("你好\n  \n\n世界")
+    assert len(result) == 2
+    assert result[0]['content'] == "你好"
+    assert result[0]['separator'] == "\n\n\n"  # Three newlines total
+    assert result[1]['content'] == "世界"
+
+    # Lines with leading/trailing whitespace should be stripped
+    result = split_into_paragraphs("  你好  \n  世界  ")
+    assert len(result) == 2
+    assert result[0]['content'] == "你好"
+    assert result[1]['content'] == "世界"
 
 
 def test_pipeline_initialization():

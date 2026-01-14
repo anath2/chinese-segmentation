@@ -2,13 +2,19 @@
 <div class="relative">
     <h2 class="text-lg font-semibold mb-4" style="color: #2D2A26;">Segmented Text</h2>
 
-    <div class="segments flex flex-wrap gap-1.5 mb-4">
-        {% for item in results %}
-        <span class="segment inline-block px-2.5 py-1.5 text-xl rounded-md cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md border-2 border-transparent"
-              style="font-family: 'Noto Serif SC', serif;"
-              data-pinyin="{{ item.pinyin }}"
-              data-english="{{ item.english }}"
-              data-index="{{ loop.index0 }}">{{ item.segment }}</span>
+    <div class="segments-container">
+        {% set segment_index = namespace(value=0) %}
+        {% for paragraph in paragraphs %}
+        <div class="paragraph flex flex-wrap gap-1.5" style="margin-bottom: {{ paragraph.separator.count('\n') * 0.5 }}rem;">
+            {% for item in paragraph.translations %}
+            <span class="segment inline-block px-2.5 py-1.5 text-xl rounded-md cursor-pointer transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md border-2 border-transparent"
+                  style="font-family: 'Noto Serif SC', serif;"
+                  data-pinyin="{{ item.pinyin }}"
+                  data-english="{{ item.english }}"
+                  data-index="{{ segment_index.value }}">{{ item.segment }}</span>
+            {% set segment_index.value = segment_index.value + 1 %}
+            {% endfor %}
+        </div>
         {% endfor %}
     </div>
 
@@ -25,7 +31,10 @@
     const tooltip = document.getElementById('word-tooltip');
     const tooltipPinyin = document.getElementById('tooltip-pinyin');
     const tooltipEnglish = document.getElementById('tooltip-english');
-    const results = {{ results | tojson }};
+
+    // Flatten paragraphs into a single results array for the table
+    const paragraphs = {{ paragraphs | tojson }};
+    const results = paragraphs.flatMap(p => p.translations);
 
     // Update translation table on the left
     const tableContainer = document.getElementById('translation-table');

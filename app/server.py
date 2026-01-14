@@ -65,8 +65,13 @@ class TranslationResult(BaseModel):
     english: str
 
 
+class ParagraphResult(BaseModel):
+    translations: list[TranslationResult]
+    separator: str
+
+
 class TranslateResponse(BaseModel):
-    results: list[TranslationResult]
+    paragraphs: list[ParagraphResult]
 
 
 # Signature Definitions
@@ -191,6 +196,42 @@ def should_skip_translation(segment: str) -> bool:
     return True
 
 
+def split_into_paragraphs(text: str) -> list[dict[str, str]]:
+    """
+    Split text into paragraphs while preserving whitespace information.
+    Returns a list of dicts with 'content' and 'separator' keys.
+    The separator indicates what whitespace follows this paragraph.
+    """
+    if not text:
+        return []
+
+    # Split by newlines while keeping track of the separators
+    lines = text.split('\n')
+    paragraphs = []
+
+    for i, line in enumerate(lines):
+        # Skip completely empty lines at the start
+        if not paragraphs and not line.strip():
+            continue
+
+        # For non-empty lines, add them as paragraphs
+        if line.strip():
+            # Determine the separator by looking ahead
+            # Count consecutive newlines after this line
+            separator = '\n'
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                separator += '\n'
+                j += 1
+
+            paragraphs.append({
+                'content': line.strip(),
+                'separator': separator if i < len(lines) - 1 else ''
+            })
+
+    return paragraphs
+
+
 # Pipeline Definition
 class Pipeline(dspy.Module):
     """Pipeline for Chinese text processing"""
@@ -246,16 +287,22 @@ async def translate_text(request: TranslateRequest):
     """Translate Chinese text to Pinyin and English"""
     pipe = get_pipeline()
 
-    # Process the text through the pipeline (async)
-    results = await pipe.acall(request.text)
+    # Split text into paragraphs
+    paragraphs = split_into_paragraphs(request.text)
 
-    # Format the response
-    translations = [
-        TranslationResult(segment=seg, pinyin=pinyin, english=english)
-        for seg, pinyin, english in results
-    ]
+    # Process each paragraph through the pipeline
+    paragraph_results = []
+    for para in paragraphs:
+        results = await pipe.aforward(para['content'])
+        translations = [
+            TranslationResult(segment=seg, pinyin=pinyin, english=english)
+            for seg, pinyin, english in results
+        ]
+        paragraph_results.append(
+            ParagraphResult(translations=translations, separator=para['separator'])
+        )
 
-    return TranslateResponse(results=translations)
+    return TranslateResponse(paragraphs=paragraph_results)
 
 
 @app.post("/translate-html", response_class=HTMLResponse)
@@ -269,16 +316,26 @@ async def translate_html(request: Request, text: str = Form(...)):
 
     try:
         pipe = get_pipeline()
-        results = await pipe.aforward(text)
 
-        translations = [
-            {"segment": seg, "pinyin": pinyin, "english": english}
-            for seg, pinyin, english in results
-        ]
+        # Split text into paragraphs
+        paragraphs = split_into_paragraphs(text)
+
+        # Process each paragraph through the pipeline
+        paragraph_results = []
+        for para in paragraphs:
+            results = await pipe.aforward(para['content'])
+            translations = [
+                {"segment": seg, "pinyin": pinyin, "english": english}
+                for seg, pinyin, english in results
+            ]
+            paragraph_results.append({
+                "translations": translations,
+                "separator": para['separator']
+            })
 
         return templates.TemplateResponse(
             "fragments/results.html",
-            {"request": request, "results": translations, "original_text": text},
+            {"request": request, "paragraphs": paragraph_results, "original_text": text},
         )
     except Exception as e:
         return templates.TemplateResponse(
@@ -299,40 +356,64 @@ async def translate_stream(text: str = Form(...)):
         try:
             pipe = get_pipeline()
 
-            # Step 1: Segment
-            segmentation = await pipe.segment.acall(text=text)
-            segments = segmentation.segments
-            total = len(segments)
+            # Split text into paragraphs
+            paragraphs = split_into_paragraphs(text)
 
-            # Send segment count and all segments
-            yield f"data: {json.dumps({'type': 'start', 'total': total, 'segments': segments})}\n\n"
+            # Count total segments across all paragraphs
+            all_paragraph_segments = []
+            for para in paragraphs:
+                segmentation = await pipe.segment.acall(text=para['content'])
+                all_paragraph_segments.append({
+                    'segments': segmentation.segments,
+                    'separator': para['separator']
+                })
 
-            # Step 2: Translate each segment
-            results = []
-            for i, segment in enumerate(segments):
-                # Skip translation for segments with only symbols, numbers, and punctuation
-                if should_skip_translation(segment):
-                    result = {
-                        "segment": segment,
-                        "pinyin": "",
-                        "english": "",
-                        "index": i,
-                    }
-                else:
-                    translation = await pipe.translate.acall(segment=segment, context=text)
-                    result = {
-                        "segment": segment,
-                        "pinyin": translation.pinyin,
-                        "english": translation.english,
-                        "index": i,
-                    }
-                results.append(result)
+            total_segments = sum(len(p['segments']) for p in all_paragraph_segments)
 
-                # Send progress update
-                yield f"data: {json.dumps({'type': 'progress', 'current': i + 1, 'total': total, 'result': result})}\n\n"
+            # Send initial info with paragraph structure
+            paragraph_info = [{'segment_count': len(p['segments']), 'separator': p['separator']} for p in all_paragraph_segments]
+            yield f"data: {json.dumps({'type': 'start', 'total': total_segments, 'paragraphs': paragraph_info})}\n\n"
 
-            # Send completion
-            yield f"data: {json.dumps({'type': 'complete', 'results': results})}\n\n"
+            # Step 2: Translate each segment in each paragraph
+            global_index = 0
+            all_results = []
+
+            for para_idx, para_data in enumerate(all_paragraph_segments):
+                para_results = []
+                for seg_idx, segment in enumerate(para_data['segments']):
+                    # Skip translation for segments with only symbols, numbers, and punctuation
+                    if should_skip_translation(segment):
+                        result = {
+                            "segment": segment,
+                            "pinyin": "",
+                            "english": "",
+                            "index": global_index,
+                            "paragraph_index": para_idx,
+                        }
+                    else:
+                        # Use the original paragraph content as context
+                        context = paragraphs[para_idx]['content']
+                        translation = await pipe.translate.acall(segment=segment, context=context)
+                        result = {
+                            "segment": segment,
+                            "pinyin": translation.pinyin,
+                            "english": translation.english,
+                            "index": global_index,
+                            "paragraph_index": para_idx,
+                        }
+                    para_results.append(result)
+                    global_index += 1
+
+                    # Send progress update
+                    yield f"data: {json.dumps({'type': 'progress', 'current': global_index, 'total': total_segments, 'result': result})}\n\n"
+
+                all_results.append({
+                    'translations': para_results,
+                    'separator': para_data['separator']
+                })
+
+            # Send completion with paragraph structure
+            yield f"data: {json.dumps({'type': 'complete', 'paragraphs': all_results})}\n\n"
 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
@@ -386,14 +467,23 @@ async def translate_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="No Chinese text found in image")
 
     pipe = get_pipeline()
-    results = await pipe.aforward(extracted_text)
 
-    translations = [
-        TranslationResult(segment=seg, pinyin=pinyin, english=english)
-        for seg, pinyin, english in results
-    ]
+    # Split text into paragraphs
+    paragraphs = split_into_paragraphs(extracted_text)
 
-    return TranslateResponse(results=translations)
+    # Process each paragraph through the pipeline
+    paragraph_results = []
+    for para in paragraphs:
+        results = await pipe.aforward(para['content'])
+        translations = [
+            TranslationResult(segment=seg, pinyin=pinyin, english=english)
+            for seg, pinyin, english in results
+        ]
+        paragraph_results.append(
+            ParagraphResult(translations=translations, separator=para['separator'])
+        )
+
+    return TranslateResponse(paragraphs=paragraph_results)
 
 
 @app.post("/translate-image-html", response_class=HTMLResponse)
@@ -417,16 +507,26 @@ async def translate_image_html(request: Request, file: UploadFile = File(...)):
             )
 
         pipe = get_pipeline()
-        results = await pipe.aforward(extracted_text)
 
-        translations = [
-            {"segment": seg, "pinyin": pinyin, "english": english}
-            for seg, pinyin, english in results
-        ]
+        # Split text into paragraphs
+        paragraphs = split_into_paragraphs(extracted_text)
+
+        # Process each paragraph through the pipeline
+        paragraph_results = []
+        for para in paragraphs:
+            results = await pipe.aforward(para['content'])
+            translations = [
+                {"segment": seg, "pinyin": pinyin, "english": english}
+                for seg, pinyin, english in results
+            ]
+            paragraph_results.append({
+                "translations": translations,
+                "separator": para['separator']
+            })
 
         return templates.TemplateResponse(
             "fragments/results.html",
-            {"request": request, "results": translations, "original_text": extracted_text},
+            {"request": request, "paragraphs": paragraph_results, "original_text": extracted_text},
         )
     except Exception as e:
         return templates.TemplateResponse(
