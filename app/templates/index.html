@@ -375,8 +375,8 @@
                 return pastelColors[index % pastelColors.length];
             }
 
-            // Render initial progress UI with pending segments
-            function renderProgressUI(segments) {
+            // Render initial progress UI with pending segments (paragraph-aware)
+            function renderProgressUI(paragraphs, totalSegments) {
                 const resultsDiv = document.getElementById('results');
                 let html = `
                     <div class="relative">
@@ -390,15 +390,26 @@
                             </div>
                         </div>
                         <h2 class="text-lg font-semibold mb-4" style="color: var(--text-primary);">Segmented Text</h2>
-                        <div id="segments-container" class="flex flex-wrap gap-1.5 mb-4" style="line-height: var(--leading-segmented);">
+                        <div id="segments-container">
                 `;
 
-                segments.forEach((seg, i) => {
-                    html += `
-                        <span class="segment segment-pending inline-block px-2.5 py-1.5 rounded-md border-2 border-transparent"
-                              style="font-family: var(--font-chinese); font-size: var(--text-chinese);"
-                              data-index="${i}">${seg}</span>
-                    `;
+                let globalIndex = 0;
+                paragraphs.forEach((para, paraIdx) => {
+                    const marginBottom = para.separator ? para.separator.split('\n').length * 0.5 : 0;
+                    html += `<div class="paragraph flex flex-wrap gap-1.5" style="margin-bottom: ${marginBottom}rem;">`;
+
+                    // Create placeholder segments based on segment_count
+                    for (let i = 0; i < para.segment_count; i++) {
+                        html += `
+                            <span class="segment segment-pending inline-block px-2.5 py-1.5 rounded-md border-2 border-transparent"
+                                  style="font-family: var(--font-chinese); font-size: var(--text-chinese);"
+                                  data-index="${globalIndex}"
+                                  data-paragraph="${paraIdx}">Loading...</span>
+                        `;
+                        globalIndex++;
+                    }
+
+                    html += `</div>`;
                 });
 
                 html += `
@@ -431,6 +442,7 @@
             function updateSegment(result) {
                 const segment = document.querySelector(`.segment[data-index="${result.index}"]`);
                 if (segment) {
+                    segment.textContent = result.segment;
                     segment.classList.remove('segment-pending', 'segment-translating');
                     segment.style.background = getPastelColor(result.index);
                     segment.style.color = 'var(--text-primary)';
@@ -517,8 +529,10 @@
                 });
             }
 
-            // Finalize the UI after completion
-            function finalizeUI(results) {
+            // Finalize the UI after completion (now with paragraphs)
+            function finalizeUI(paragraphs) {
+                // Flatten paragraphs into a single results array for table
+                const results = paragraphs.flatMap(p => p.translations);
                 translationResults = results;
 
                 // Hide progress bar
@@ -631,7 +645,7 @@
 
                                 switch (data.type) {
                                     case 'start':
-                                        renderProgressUI(data.segments);
+                                        renderProgressUI(data.paragraphs, data.total);
                                         // Mark first segment as translating
                                         const firstSeg = document.querySelector('.segment[data-index="0"]');
                                         if (firstSeg) firstSeg.classList.add('segment-translating');
@@ -643,7 +657,7 @@
                                         break;
 
                                     case 'complete':
-                                        finalizeUI(data.results);
+                                        finalizeUI(data.paragraphs);
                                         break;
 
                                     case 'error':
