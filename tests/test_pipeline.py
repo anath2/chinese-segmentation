@@ -193,7 +193,7 @@ def test_pipeline_initialization():
         mock_cot.return_value = Mock()
         mock_predict.return_value = Mock()
 
-        pipeline = Pipeline()
+        _pipeline = Pipeline()
 
         # Segmenter uses ChainOfThought
         mock_cot.assert_called_once_with(Segmenter)

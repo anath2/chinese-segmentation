@@ -223,10 +223,11 @@ class TestTranslateImageEndpoint:
 
         assert response.status_code == 200
         data = response.json()
-        assert len(data["results"]) == 1
-        assert data["results"][0]["segment"] == "你好"
-        assert data["results"][0]["pinyin"] == "nǐ hǎo"
-        assert data["results"][0]["english"] == "hello"
+        assert len(data["paragraphs"]) == 1
+        assert len(data["paragraphs"][0]["translations"]) == 1
+        assert data["paragraphs"][0]["translations"][0]["segment"] == "你好"
+        assert data["paragraphs"][0]["translations"][0]["pinyin"] == "nǐ hǎo"
+        assert data["paragraphs"][0]["translations"][0]["english"] == "hello"
 
     @patch("app.server.extract_text_from_image")
     def test_no_text_found_in_image(self, mock_ocr, client):

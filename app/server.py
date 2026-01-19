@@ -1,6 +1,5 @@
 import io
 import os
-import re
 import unicodedata
 from pathlib import Path
 from threading import Lock
@@ -14,6 +13,15 @@ import json
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+
+from app.persistence import (
+    create_event,
+    create_text,
+    get_text,
+    init_db,
+    save_vocab_item,
+    update_vocab_status,
+)
 
 # Load environment variables
 load_dotenv()
@@ -38,6 +46,11 @@ app = FastAPI(title="Chinese Text Transcriber", version="1.0.0")
 BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+# Initialize local persistence (SQLite)
+@app.on_event("startup")
+def _startup_init_db() -> None:
+    init_db()
 
 # Initialize pipeline with thread-safe lazy initialization
 _pipeline_lock = Lock()
@@ -84,6 +97,59 @@ class ParagraphResult(BaseModel):
 
 class TranslateResponse(BaseModel):
     paragraphs: list[ParagraphResult]
+
+
+# Persistence API models
+class CreateTextRequest(BaseModel):
+    raw_text: str
+    source_type: str = "text"  # 'text' | 'ocr'
+    metadata: dict = {}
+
+
+class CreateTextResponse(BaseModel):
+    id: str
+
+
+class TextResponse(BaseModel):
+    id: str
+    created_at: str
+    source_type: str
+    raw_text: str
+    normalized_text: str
+    metadata: dict
+
+
+class CreateEventRequest(BaseModel):
+    event_type: str
+    text_id: str | None = None
+    segment_id: str | None = None
+    payload: dict = {}
+
+
+class CreateEventResponse(BaseModel):
+    id: str
+
+
+class SaveVocabRequest(BaseModel):
+    headword: str
+    pinyin: str = ""
+    english: str = ""
+    text_id: str | None = None
+    segment_id: str | None = None
+    snippet: str | None = None
+
+
+class SaveVocabResponse(BaseModel):
+    vocab_item_id: str
+
+
+class UpdateVocabStatusRequest(BaseModel):
+    vocab_item_id: str
+    status: str  # unknown|learning|known
+
+
+class OkResponse(BaseModel):
+    ok: bool = True
 
 
 # Signature Definitions
@@ -299,6 +365,69 @@ async def health_check():
 async def homepage(request: Request):
     """Serve the main page with the translation form"""
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+# --- Persistence API (Milestone 0) ---
+@app.post("/api/texts", response_model=CreateTextResponse)
+async def api_create_text(request: CreateTextRequest):
+    if not request.raw_text.strip():
+        raise HTTPException(status_code=400, detail="raw_text is required")
+    record = create_text(
+        raw_text=request.raw_text, source_type=request.source_type, metadata=request.metadata
+    )
+    return CreateTextResponse(id=record.id)
+
+
+@app.get("/api/texts/{text_id}", response_model=TextResponse)
+async def api_get_text(text_id: str):
+    record = get_text(text_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    return TextResponse(
+        id=record.id,
+        created_at=record.created_at,
+        source_type=record.source_type,
+        raw_text=record.raw_text,
+        normalized_text=record.normalized_text,
+        metadata=record.metadata,
+    )
+
+
+@app.post("/api/events", response_model=CreateEventResponse)
+async def api_create_event(request: CreateEventRequest):
+    if not request.event_type.strip():
+        raise HTTPException(status_code=400, detail="event_type is required")
+    event_id = create_event(
+        event_type=request.event_type,
+        text_id=request.text_id,
+        segment_id=request.segment_id,
+        payload=request.payload,
+    )
+    return CreateEventResponse(id=event_id)
+
+
+@app.post("/api/vocab/save", response_model=SaveVocabResponse)
+async def api_save_vocab(request: SaveVocabRequest):
+    if not request.headword.strip():
+        raise HTTPException(status_code=400, detail="headword is required")
+    vocab_item_id = save_vocab_item(
+        headword=request.headword.strip(),
+        pinyin=request.pinyin.strip(),
+        english=request.english.strip(),
+        text_id=request.text_id,
+        segment_id=request.segment_id,
+        snippet=request.snippet,
+    )
+    return SaveVocabResponse(vocab_item_id=vocab_item_id)
+
+
+@app.post("/api/vocab/status", response_model=OkResponse)
+async def api_update_vocab_status(request: UpdateVocabStatusRequest):
+    try:
+        update_vocab_status(vocab_item_id=request.vocab_item_id, status=request.status)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return OkResponse()
 
 
 @app.post("/translate-text", response_model=TranslateResponse)

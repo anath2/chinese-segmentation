@@ -362,6 +362,48 @@
         </main>
 
         <script>
+            // --- Milestone 0: lightweight persistence hooks ---
+            let currentTextId = null;
+            let currentRawText = '';
+
+            async function apiPostJson(path, payload) {
+                const res = await fetch(path, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    let detail = '';
+                    try { detail = await res.text(); } catch (e) {}
+                    throw new Error(`Request failed (${res.status}): ${detail}`);
+                }
+                return await res.json();
+            }
+
+            async function ensureSavedText() {
+                if (currentTextId || !currentRawText) return currentTextId;
+                const data = await apiPostJson('/api/texts', {
+                    raw_text: currentRawText,
+                    source_type: 'text',
+                    metadata: {}
+                });
+                currentTextId = data.id;
+                return currentTextId;
+            }
+
+            async function logEvent(eventType, payload = {}) {
+                // Best effort: don't block UX on analytics.
+                try {
+                    await apiPostJson('/api/events', {
+                        event_type: eventType,
+                        text_id: currentTextId,
+                        payload
+                    });
+                } catch (e) {
+                    // swallow
+                }
+            }
+
             function clearPreview() {
                 const fileInput = document.getElementById('image-input');
                 const uploadPrompt = document.getElementById('upload-prompt');
@@ -388,6 +430,7 @@
             let translationResults = [];
             let isClickActive = false;
             let activeSegment = null;
+            let lastTooltipData = null;
 
             function getPastelColor(index) {
                 return pastelColors[index % pastelColors.length];
@@ -442,9 +485,18 @@
                 html += `
                         </div>
                         <!-- Floating tooltip overlay -->
-                        <div id="word-tooltip" class="hidden absolute z-50 rounded-md shadow-lg p-2 min-w-[140px] pointer-events-none" style="background: var(--tooltip-bg);">
+                        <div id="word-tooltip" class="hidden absolute z-50 rounded-md shadow-lg p-2 min-w-[160px] pointer-events-auto" style="background: var(--tooltip-bg);">
                             <div class="font-semibold mb-0.5" style="color: var(--tooltip-text); font-size: var(--text-sm);" id="tooltip-pinyin"></div>
                             <div style="color: var(--tooltip-text); opacity: 0.8; font-size: var(--text-xs);" id="tooltip-english"></div>
+                            <div class="mt-2 flex items-center gap-2">
+                                <button id="save-word-btn"
+                                        type="button"
+                                        class="px-2 py-1 rounded"
+                                        style="background: rgba(255,255,255,0.12); color: var(--tooltip-text); font-size: var(--text-xs);">
+                                    Save
+                                </button>
+                                <span id="save-word-status" style="color: rgba(255,255,255,0.75); font-size: var(--text-xs);"></span>
+                            </div>
                             <div class="absolute w-2 h-2 transform rotate-45 -bottom-1 left-1/2 -translate-x-1/2" style="background: var(--tooltip-bg);"></div>
                         </div>
                     </div>
@@ -508,6 +560,13 @@
 
                     tooltipPinyin.textContent = seg.dataset.pinyin;
                     tooltipEnglish.textContent = seg.dataset.english;
+                    lastTooltipData = {
+                        headword: seg.textContent,
+                        pinyin: seg.dataset.pinyin || '',
+                        english: seg.dataset.english || ''
+                    };
+                    const saveStatus = document.getElementById('save-word-status');
+                    if (saveStatus) saveStatus.textContent = '';
 
                     const segRect = seg.getBoundingClientRect();
                     const containerRect = seg.closest('.relative').getBoundingClientRect();
@@ -557,6 +616,8 @@
                         isClickActive = true;
                         activeSegment = segment;
                         showTooltip(segment);
+                        // Log a deliberate lookup/tap (not hover).
+                        logEvent('tap', { headword: segment.textContent });
                     }
                 });
             }
@@ -641,6 +702,9 @@
                 tableContainer.innerHTML = '';
                 isClickActive = false;
                 activeSegment = null;
+                lastTooltipData = null;
+                currentTextId = null;
+                currentRawText = text;
                 resultsDiv.innerHTML = `
                     <div class="h-full flex items-center justify-center">
                         <div class="text-center">
@@ -696,6 +760,8 @@
                                                 translationEl.textContent = data.fullTranslation;
                                             }
                                         }
+                                        // Persist the source text after successful completion.
+                                        try { await ensureSavedText(); } catch (e) {}
                                         break;
 
                                     case 'error':
@@ -711,6 +777,29 @@
             }
 
             document.addEventListener('DOMContentLoaded', function() {
+                // Save button inside tooltip
+                document.addEventListener('click', async (e) => {
+                    if (e.target && e.target.id === 'save-word-btn') {
+                        e.stopPropagation();
+                        const statusEl = document.getElementById('save-word-status');
+                        try {
+                            await ensureSavedText();
+                            if (!lastTooltipData || !lastTooltipData.headword) return;
+                            await apiPostJson('/api/vocab/save', {
+                                headword: lastTooltipData.headword,
+                                pinyin: lastTooltipData.pinyin,
+                                english: lastTooltipData.english,
+                                text_id: currentTextId,
+                                snippet: currentRawText
+                            });
+                            if (statusEl) statusEl.textContent = 'Saved';
+                            logEvent('save_vocab', { headword: lastTooltipData.headword });
+                        } catch (err) {
+                            if (statusEl) statusEl.textContent = 'Error';
+                        }
+                    }
+                });
+
                 // Translate form handler
                 const translateForm = document.getElementById('translate-form');
                 const translateBtn = translateForm.querySelector('button[type="submit"]');
@@ -786,10 +875,12 @@
 
                 // Click outside segments to dismiss pinned tooltip
                 document.addEventListener('click', (e) => {
-                    if (isClickActive && !e.target.classList.contains('segment')) {
+                    // Don't dismiss if clicking inside tooltip UI
+                    const tooltip = document.getElementById('word-tooltip');
+                    const clickedInTooltip = tooltip && tooltip.contains(e.target);
+                    if (isClickActive && !clickedInTooltip && !e.target.classList.contains('segment')) {
                         isClickActive = false;
                         activeSegment = null;
-                        const tooltip = document.getElementById('word-tooltip');
                         if (tooltip) {
                             tooltip.classList.add('hidden');
                         }
